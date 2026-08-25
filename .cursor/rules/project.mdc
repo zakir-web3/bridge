@@ -1,0 +1,34 @@
+---
+description: Bridge 项目地图与安全红线。改合约、relayer、绑定或配置时必须遵守。
+alwaysApply: true
+---
+
+# Bridge 项目约束
+
+跨链桥：源链 `Bridge` 做 lock/deposit；目标链 `BridgeHub` 做 mint/withdraw（UUPS）。Go relayer 扫两边、用 EIP-712 签名并提交交易。
+
+## 目录
+
+- 源链：`internal/bridge/`；目标链：`internal/bridgehub/`
+- 扫描 / 调度 / 缓存：`internal/scanner/`、`internal/scheduler/`、`internal/cache/`
+- 合约：`solidity/contracts/`；部署只用 `solidity/deploy.sh`，不要另起脚本
+- Relayer 模板是 `.config.toml`，本地复制为 `config.toml`
+
+## 禁止
+
+- 不要手改 `internal/contract/*.sol.go`（由仓库根目录 `./compile_abi.sh` 生成；脚本会删掉 BridgeHub 绑定里重复的 `Signature`）
+- 不要提交 `config.toml`、`.env`、私钥、RPC 密钥；不要把 `priv_key` 打进日志
+- 不要把 Bridge / BridgeHub 的职责、chain ID、token 地址写反
+- 不要绕过现有 scanner / scheduler / cache，另写一套扫块或落库
+
+## 改合约 ABI 或 EIP-712 后
+
+1. 在仓库根目录运行 `./compile_abi.sh`
+2. 同步手写封装 `internal/contract/{bridge,bridge_hub,bridge_erc20}.go` 与 `solidity/contracts/` 的 domain / typehash
+3. 只改一边会导致跨链签名校验失败
+
+## Relayer
+
+- 源链只处理 `bridge_tokens` 白名单
+- 发送 finalize 需要 `send_finalize_withdrawals = true` **且** `ENABLE_FINALIZE_WITHDRAWALS=true`
+- `start_block` 必须对齐合约部署高度；`no_send = true` 只模拟不广播
