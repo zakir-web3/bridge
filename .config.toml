@@ -1,0 +1,115 @@
+# 日志级别配置：debug, info, warn, error
+log_level = "debug"
+# 日志格式：console 或 json
+log_format= "console"
+
+# 缓存配置
+# 数据库文件路径，用于缓存区块高度
+source = "./tmp/bridge.db"
+
+# 验证人私钥：用于签名交易的私钥，请替换为实际的私钥
+priv_key = "your_private_key_here"
+
+# 跨链中心配置
+[bridge_hub]
+# 目标链节点 RPC 地址，用于连接 BridgeHub 所在链
+node_url = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+# 链ID：BridgeHub 所在区块链网络的链 ID
+chain_id = "1337"
+# 最大重试次数：当请求失败时的重试次数
+max_retries = 5
+# 基础延迟时间：重试之间的基础等待时间
+base_delay = "100ms"
+# 最大延迟时间：重试之间的最大等待时间
+max_delay = "5s"
+# 退避比率：每次重试时延迟时间的增长倍数
+backoff_rate = 2.0
+# 扫描间隔：扫描新区块的时间间隔
+interval = "3s"
+# 起始区块高度：开始扫描的区块高度，根据实际部署高度设置
+start_block = 0
+# 每次扫描的区块数量：单次扫描处理的区块数量
+block_interval = 100
+# 区块延迟：等待区块确认的区块数量
+block_delay = 6
+# 是否清除缓存：设置为true时会清除本地缓存的区块高度，从start_block重新开始扫描
+clear_cache = false
+# 跨链中心合约地址：部署的BridgeHub合约地址
+bridge_hub_address = "0x1234567890123456789012345678901234567890"
+# 费用历史区块数量：用于计算gas费用的历史区块数量
+fee_history_block_count = 10
+# 费用历史奖励百分位数：用于计算gas费用的百分位数
+fee_history_reward_percentiles = [50.0, 65.0, 80.0]
+# 最大gas小费上限：交易的最大小费gas价格
+max_gas_tip_cap = "1000000000"  # 1 Gwei
+# 最大gas费用上限：交易的最大总gas价格
+max_gas_fee_cap = "5000000000"  # 5 Gwei
+# 增加百分位数：gas费用相对于历史费用的增加百分比
+increase_percentile = "120"
+# 最大gas限制：交易的最大gas使用量
+max_gas_limit = 5000000
+# 不发送标志：设置为true时只模拟交易，不实际发送
+no_send = false
+# Gas小费上限：交易的最小gas小费价格
+gas_tip_cap="1000000000"
+# Gas费用上限：交易的最小总gas价格
+gas_fee_cap="1000000000"
+
+# 桥接节点配置
+[bridge]
+# BSC节点RPC地址：用于连接BSC网络
+node_url = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+# 链ID：目标区块链网络的链ID
+chain_id = "97"
+# 最大重试次数：当请求失败时的重试次数
+max_retries = 5
+# 基础延迟时间：重试之间的基础等待时间
+base_delay = "100ms"
+# 最大延迟时间：重试之间的最大等待时间
+max_delay = "5s"
+# 退避比率：每次重试时延迟时间的增长倍数
+backoff_rate = 2.0
+# 扫描间隔：扫描新区块的时间间隔
+interval = "6s"
+# 起始区块高度：开始扫描的区块高度，根据实际部署高度设置
+start_block = 0
+# 每次扫描的区块数量：单次扫描处理的区块数量
+block_interval = 100
+# 区块延迟：等待区块确认的区块数量
+block_delay = 12
+# 是否清除缓存：设置为true时会清除本地缓存的区块高度，从start_block重新开始扫描
+clear_cache = false
+# 桥接合约地址：部署的Bridge合约地址
+bridge_address = "0x1234567890123456789012345678901234567890"
+# 需要监控的ERC20代币地址列表：支持跨链的代币合约地址
+bridge_tokens = [
+    "0x1234567890123456789012345678901234567890",  # USDT
+]
+# 费用历史区块数量：用于计算gas费用的历史区块数量
+fee_history_block_count = 10
+# 费用历史奖励百分位数：用于计算gas费用的百分位数
+fee_history_reward_percentiles = [50.0, 65.0, 80.0]
+# 最大gas小费上限：交易的最大小费gas价格
+max_gas_tip_cap = "1000000000"  # 1 Gwei
+# 最大gas费用上限：交易的最大总gas价格
+max_gas_fee_cap = "5000000000"  # 5 Gwei
+# 增加百分位数：gas费用相对于历史费用的增加百分比
+increase_percentile = "120"
+# 最大gas限制：交易的最大gas使用量
+max_gas_limit = 500000
+# 不发送标志：设置为true时只模拟交易，不实际发送
+no_send = false
+# Gas小费上限：交易的最小gas小费价格
+gas_tip_cap="120000000" # 0.12 Gwei
+# Gas费用上限：交易的最小总gas价格
+gas_fee_cap="1200000000" # 0.12 Gwei
+# 是否发送最终化提取：设置为true时会发送最终化提取交易，只需要一个验证人设置为true即可
+send_finalize_withdrawals = true
+# 最终化提取间隔：两次最终化提取之间的时间间隔
+finalize_withdrawals_interval="30s"
+# 最大提取金额：每次提取的最大金额，单位为最小代币单位（例如，USDT的最小单位是1e-18）
+max_withdraw_amount = "100000000000000000000" # 100
+# 提取交易的gas限制：每次提取交易的gas使用量限制
+request_withdraw_gas_limit = 0
+# 是否启用提取请求：设置为true时启用提取请求功能
+enable_request_withdraw = true

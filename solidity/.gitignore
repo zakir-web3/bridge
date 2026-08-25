@@ -1,0 +1,8 @@
+.DS_Store
+typechain
+typechain-types
+node_modules
+cache
+artifacts
+.env
+ignition
