@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-用于在 EVM 兼容区块链之间转移 ERC-20 资产的跨链桥。本仓库包含 Solidity 智能合约和 Go 中继服务，负责监听两条链、签名跨链消息并提交链上交易。
+用于在 EVM 兼容区块链之间转移 ERC-20 资产的跨链桥。本仓库包含 Solidity 智能合约和 Go 中继服务，负责监听两条链、签名跨链消息并提交链上交易。源链 `Bridge` 合约参考自 [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol)。
 
 [English](README.md)
 
@@ -134,6 +134,10 @@ cd solidity
 npm install
 npm run compile
 ```
+
+## 参考
+
+源链 [`Bridge`](solidity/contracts/Bridge.sol) 合约参考自 [hyperliquid-dex/contracts](https://github.com/hyperliquid-dex/contracts) 仓库中的 [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol)（Apache-2.0 许可证），并沿用了上游设计中的验证者 quorum、争议期与提款最终确认机制。
 
 ## 安全
 

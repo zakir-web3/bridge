@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A cross-chain bridge for transferring ERC-20 assets between EVM-compatible blockchains. The repository includes Solidity smart contracts and a Go relayer that watches both chains, signs cross-chain messages, and submits on-chain transactions.
+A cross-chain bridge for transferring ERC-20 assets between EVM-compatible blockchains. The repository includes Solidity smart contracts and a Go relayer that watches both chains, signs cross-chain messages, and submits on-chain transactions. The source-chain `Bridge` contract is adapted from [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol).
 
 [中文文档](README.zh-CN.md)
 
@@ -134,6 +134,10 @@ cd solidity
 npm install
 npm run compile
 ```
+
+## References
+
+The source-chain [`Bridge`](solidity/contracts/Bridge.sol) contract is adapted from [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol) in the [hyperliquid-dex/contracts](https://github.com/hyperliquid-dex/contracts) repository (Apache-2.0). It inherits the validator quorum, dispute period, and withdrawal finalization model from the upstream design.
 
 ## Security
 
