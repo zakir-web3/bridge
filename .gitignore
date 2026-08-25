@@ -6,9 +6,3 @@ bin
 *.db
 .idea/
 docs/
-
-solidity/debug.sh
-solidity/cache/
-solidity/artifacts/
-solidity/typechain-types/
-solidity/node_modules/
