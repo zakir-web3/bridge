@@ -1,0 +1,29 @@
+# Enable GitHub auto-merge on pull requests once they are approved and CI is green.
+# Requires repository settings documented in .github/BRANCH_PROTECTION.md.
+name: Automerge
+
+on:
+  pull_request_review:
+    types:
+      - submitted
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  Automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: reitermarkus/automerge@v2
+        with:
+          # Prefer a PAT (repo secret AUTOMERGE_PAT) when GITHUB_TOKEN cannot enable auto-merge.
+          token: ${{ secrets.AUTOMERGE_PAT || secrets.GITHUB_TOKEN }}
+          merge-method: merge

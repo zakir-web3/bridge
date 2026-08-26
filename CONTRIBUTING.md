@@ -54,6 +54,12 @@ If you touch contracts or bindings, also run `./compile_abi.sh` and include the 
 - Link the related issue.
 - For contract or relayer behavior changes, say how you tested (unit tests, `no_send`, which networks).
 
+### Review and merge policy (`main`)
+
+All pull requests targeting `main` need **one approving review** and **passing CI** (`Go`, `Solidity`, `Automerge`) before they can merge. After approval, the Automerge workflow enables GitHub auto-merge; the PR merges automatically once every required check is green. Do not merge manually unless you are bypassing policy for an emergency.
+
+Maintainers: see [.github/BRANCH_PROTECTION.md](.github/BRANCH_PROTECTION.md) for the one-time repository ruleset and **Allow auto-merge** setup.
+
 ## Security
 
 Do not open a public issue for fund-loss, signature forgery, replay, or privilege-escalation reports. Use [GitHub Security Advisories](https://github.com/zakir-web3/bridge/security/advisories/new). See [SECURITY.md](SECURITY.md).
