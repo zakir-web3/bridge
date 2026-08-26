@@ -4,6 +4,9 @@
   "description": "A Solidity project structure",
   "main": "index.js",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
     "test": "hardhat test",
     "compile": "hardhat compile",
