@@ -24,7 +24,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Test
-        run: go test ./...
+        run: make test
       - name: Build
         run: make build
 

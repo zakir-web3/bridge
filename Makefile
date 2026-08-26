@@ -9,6 +9,9 @@ install:
 build:
 	go build -mod=readonly -ldflags '$(LDFLAGS)' -o ./bin/bridge
 
+test:
+	go test ./...
+
 lint:
 	golangci-lint run -v ./...
 
