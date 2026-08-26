@@ -17,7 +17,7 @@ Set `NETWORK` to a name from `hardhat.config.ts`:
 
 | `NETWORK` | Meaning |
 |-----------|---------|
-| `destination` | Any EVM chain. Set `ETH_RPC_URL` and `CHAIN_ID` (default `1337`) |
+| `custom` | Any EVM chain. Set `ETH_RPC_URL` and `CHAIN_ID` (default `1337`) |
 | `bsc` | BSC mainnet preset (`chainId = 56`) |
 | `bscTestnet` | BSC testnet preset (`chainId = 97`) |
 | `localhost` | Local Hardhat / Anvil node |
@@ -37,7 +37,7 @@ Deployer:
 - `PRIVATE_KEY` — `0x`-prefixed deployer key
 - `ETH_RPC_URL` — RPC for `NETWORK`
 - `NETWORK` — see the table above
-- `CHAIN_ID` — required for `destination`, and when registering a token pair (source-chain ID)
+- `CHAIN_ID` — required for `custom`, and when registering a token pair (source-chain ID)
 
 Token pair (when calling `bridgeToken`):
 
@@ -71,7 +71,7 @@ Hot, cold, and power lists must be the same length.
 
 ## Deploy Bridge (source chain)
 
-Example using the BSC preset. For any other EVM chain, use `NETWORK=destination` and set `CHAIN_ID`.
+Example using the BSC preset. For any other EVM chain, use `NETWORK=custom` and set `CHAIN_ID`.
 
 ```bash
 export NETWORK=bsc
@@ -95,7 +95,7 @@ npx hardhat --network "$NETWORK" run scripts/deploy-bridge-token.ts
 ## Deploy BridgeHub (destination chain)
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export CHAIN_ID=1337
 export PRIVATE_KEY=0xYOUR_KEY
 export ETH_RPC_URL=https://your-destination-rpc
@@ -108,7 +108,7 @@ The script prints the `BridgeHub` address.
 Test token (local / testnet only):
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export PRIVATE_KEY=0xYOUR_KEY
 
 npx hardhat --network "$NETWORK" run scripts/deploy-bridge-token.ts
@@ -119,7 +119,7 @@ npx hardhat --network "$NETWORK" run scripts/deploy-bridge-token.ts
 `CHAIN_ID` here is the **source** chain ID the token originates from.
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export PRIVATE_KEY=0xYOUR_KEY
 export CHAIN_ID=56
 export TOKEN_ADDRESS=0xSourceChainToken
@@ -134,7 +134,7 @@ bash ./deploy.sh bridgeToken
 Unset means free. Fees are per destination token.
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export PRIVATE_KEY=0xYOUR_KEY
 export BRIDGE_HUB_ADDRESS=0xBridgeHub
 export BRIDGED_TOKEN_ADDRESS=0xDestinationChainToken

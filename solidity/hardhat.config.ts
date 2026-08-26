@@ -13,7 +13,7 @@ const config: HardhatUserConfig = {
     localhost: {
       url: `${process.env.LOCAL_URL || "http://127.0.0.1:9545"}`,
     },
-    destination: {
+    custom: {
       url: `${process.env.ETH_RPC_URL || "http://127.0.0.1:9545"}`,
       chainId: parseInt(process.env.CHAIN_ID || "1337", 10),
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,

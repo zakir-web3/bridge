@@ -17,7 +17,7 @@
 
 | `NETWORK` | 含义 |
 |-----------|------|
-| `destination` | 任意 EVM 链。设置 `ETH_RPC_URL` 和 `CHAIN_ID`（默认 `1337`） |
+| `custom` | 任意 EVM 链。设置 `ETH_RPC_URL` 和 `CHAIN_ID`（默认 `1337`） |
 | `bsc` | BSC 主网预设（`chainId = 56`） |
 | `bscTestnet` | BSC 测试网预设（`chainId = 97`） |
 | `localhost` | 本地 Hardhat / Anvil |
@@ -37,7 +37,7 @@
 - `PRIVATE_KEY` — `0x` 开头的部署私钥
 - `ETH_RPC_URL` — 对应 `NETWORK` 的 RPC
 - `NETWORK` — 见上表
-- `CHAIN_ID` — `destination` 网络必填；注册代币对时表示**源链** chain ID
+- `CHAIN_ID` — `custom` 网络必填；注册代币对时表示**源链** chain ID
 
 代币对（调用 `bridgeToken` 时）：
 
@@ -71,7 +71,7 @@ export POWERS=1,1
 
 ## 部署 Bridge（源链）
 
-下面以 BSC 预设为例。其他 EVM 链使用 `NETWORK=destination` 并设置 `CHAIN_ID`。
+下面以 BSC 预设为例。其他 EVM 链使用 `NETWORK=custom` 并设置 `CHAIN_ID`。
 
 ```bash
 export NETWORK=bsc
@@ -95,7 +95,7 @@ npx hardhat --network "$NETWORK" run scripts/deploy-bridge-token.ts
 ## 部署 BridgeHub（目标链）
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export CHAIN_ID=1337
 export PRIVATE_KEY=0x你的私钥
 export ETH_RPC_URL=https://your-destination-rpc
@@ -108,7 +108,7 @@ bash ./deploy.sh bridgeHub
 测试 Token（仅本地 / 测试网）：
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export PRIVATE_KEY=0x你的私钥
 
 npx hardhat --network "$NETWORK" run scripts/deploy-bridge-token.ts
@@ -119,7 +119,7 @@ npx hardhat --network "$NETWORK" run scripts/deploy-bridge-token.ts
 这里的 `CHAIN_ID` 是代币所在的**源链** ID。
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export PRIVATE_KEY=0x你的私钥
 export CHAIN_ID=56
 export TOKEN_ADDRESS=0x源链Token
@@ -134,7 +134,7 @@ bash ./deploy.sh bridgeToken
 不设置则免费。每个目标链 token 单独计费。
 
 ```bash
-export NETWORK=destination
+export NETWORK=custom
 export PRIVATE_KEY=0x你的私钥
 export BRIDGE_HUB_ADDRESS=0xBridgeHub
 export BRIDGED_TOKEN_ADDRESS=0x目标链Token
