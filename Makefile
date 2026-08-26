@@ -1,7 +1,10 @@
 #!/usr/bin/make -f
 
-COMMIT := $(shell git rev-parse --short=8 HEAD)
-LDFLAGS := -s -w -X main.Version=$(COMMIT)
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null)
+ifeq ($(VERSION),)
+VERSION := dev
+endif
+LDFLAGS := -s -w -X main.Version=$(VERSION)
 
 install:
 	go install -mod=readonly -ldflags '$(LDFLAGS)'

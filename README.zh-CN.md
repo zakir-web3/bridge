@@ -1,6 +1,7 @@
 # Bridge
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/zakir-web3/bridge)](https://github.com/zakir-web3/bridge/releases)
 
 自托管的 EVM **lock-and-mint** 跨链桥：用户在源链 `Bridge` 锁定 ERC-20，Go 中继服务收集你自己的验证者集合的 EIP-712 签名，在目标链 `BridgeHub` 铸币。
 

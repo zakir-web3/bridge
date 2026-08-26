@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build release binaries
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist
+          version="${VERSION#v}"
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            env GOOS="$os" GOARCH="$arch" go build -mod=readonly \
+              -ldflags "-s -w -X main.Version=${version}" \
+              -o "dist/bridge-${os}-${arch}" .
+          done
+          ls -la dist/
+
+      - name: Extract release notes
+        id: notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          notes=$(awk "/^## \\[${version}\\]/ {flag=1; next} /^## \\[/ && flag {exit} flag" CHANGELOG.md)
+          if [ -z "$notes" ]; then
+            notes="Release ${TAG}. See CHANGELOG.md for details."
+          fi
+          printf '%s\n' "$notes" > /tmp/release-notes.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: false
+          body_path: /tmp/release-notes.md

@@ -1,6 +1,7 @@
 # Bridge
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/zakir-web3/bridge)](https://github.com/zakir-web3/bridge/releases)
 
 Self-hosted **lock-and-mint** bridge for ERC-20 tokens between EVM chains. Users lock on a source-chain `Bridge`; a Go relayer collects EIP-712 signatures from your validator set and mints on a destination-chain `BridgeHub`.
 
