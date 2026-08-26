@@ -21,6 +21,45 @@ func NewBridgeHubDomain(chainId *big.Int, verifyingContract common.Address) apit
 	}
 }
 
+func (v *BridgeHubRequestedValidatorSetUpdate) ToTypedData(_, chainId *big.Int, verifyingContract common.Address) apitypes.TypedData {
+	hot := make([]interface{}, len(v.HotAddresses))
+	for i, addr := range v.HotAddresses {
+		hot[i] = addr.Hex()
+	}
+	cold := make([]interface{}, len(v.ColdAddresses))
+	for i, addr := range v.ColdAddresses {
+		cold[i] = addr.Hex()
+	}
+	powers := make([]interface{}, len(v.Powers))
+	for i, power := range v.Powers {
+		powers[i] = strconv.FormatUint(power, 10)
+	}
+	return apitypes.TypedData{
+		Domain: NewBridgeHubDomain(chainId, verifyingContract),
+		Types: apitypes.Types{
+			"EIP712Domain": {
+				{Name: "name", Type: "string"},
+				{Name: "version", Type: "string"},
+				{Name: "chainId", Type: "uint256"},
+				{Name: "verifyingContract", Type: "address"},
+			},
+			"UpdateValidatorSet": {
+				{Name: "epoch", Type: "uint64"},
+				{Name: "hotAddresses", Type: "address[]"},
+				{Name: "coldAddresses", Type: "address[]"},
+				{Name: "powers", Type: "uint64[]"},
+			},
+		},
+		PrimaryType: "UpdateValidatorSet",
+		Message: apitypes.TypedDataMessage{
+			"epoch":         strconv.FormatUint(v.NewEpoch, 10),
+			"hotAddresses":  hot,
+			"coldAddresses": cold,
+			"powers":        powers,
+		},
+	}
+}
+
 func (w *BridgeHubWithdraw) ToTypedData(_, chainId *big.Int, verifyingContract common.Address) apitypes.TypedData {
 	return apitypes.TypedData{
 		Domain: NewBridgeDomain(chainId, verifyingContract),

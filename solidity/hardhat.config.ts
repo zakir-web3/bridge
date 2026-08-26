@@ -65,7 +65,7 @@ const config: HardhatUserConfig = {
     ],
   },
   gasReporter: {
-    enabled: true,
+    enabled: process.env.CI !== "true",
     gasPrice: 1,
   },
 };
