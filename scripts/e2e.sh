@@ -15,6 +15,9 @@ SOURCE_RPC="http://127.0.0.1:${SOURCE_PORT}"
 HUB_RPC="http://127.0.0.1:${HUB_PORT}"
 MINE_INTERVAL="${HARDHAT_MINE_INTERVAL:-1000}"
 
+# Hardhat asks for telemetry consent on first TTY use; e2e runs many CLI invocations.
+export HARDHAT_DISABLE_TELEMETRY_PROMPT="${HARDHAT_DISABLE_TELEMETRY_PROMPT:-true}"
+
 # Hardhat account #0 is the validator/relayer (public test key, local/CI only).
 PRIVATE_KEY="${PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}"
 VALIDATOR="${VALIDATOR:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}"
