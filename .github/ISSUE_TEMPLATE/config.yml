@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/zakir-web3/bridge/security/advisories/new
+    about: Fund loss, signature forgery, replay, or privilege issues. Do not open a public issue.

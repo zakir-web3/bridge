@@ -2,9 +2,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A cross-chain bridge for transferring ERC-20 assets between EVM-compatible blockchains. The repository includes Solidity smart contracts and a Go relayer that watches both chains, signs cross-chain messages, and submits on-chain transactions. The source-chain `Bridge` contract is adapted from [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol).
+Self-hosted **lock-and-mint** bridge for ERC-20 tokens between EVM chains. Users lock on a source-chain `Bridge`; a Go relayer collects EIP-712 signatures from your validator set and mints on a destination-chain `BridgeHub`.
 
-[中文文档](README.zh-CN.md)
+This is for appchain and token-issuer teams who operate their own validators. It is not a general-purpose messaging protocol (LayerZero, Hyperlane) and not a retail swap router.
+
+The source-chain `Bridge` contract is adapted from [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol).
+
+[中文文档](README.zh-CN.md) · [Docs](docs/README.md) · [Contributing](CONTRIBUTING.md)
 
 ## Overview
 
@@ -84,6 +88,15 @@ Both `[bridge]` and `[bridge_hub]` accept any EVM chain — set `node_url` and `
 
 The service starts two block scanners (one per chain) and optionally a withdrawal finalizer when `send_finalize_withdrawals = true`.
 
+## Documentation
+
+| Doc | Contents |
+|-----|----------|
+| [docs/README.md](docs/README.md) | Operator, deposit/withdraw, and wallet integration guides (Chinese) |
+| [solidity/README.md](solidity/README.md) | Contract deployment (`Bridge`, `BridgeHub`, token pairs) |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to build, test, and open a pull request |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting |
+
 ## Configuration Reference
 
 `config.toml` controls logging, caching, network endpoints, contract addresses, scan intervals, block confirmation depth, and transaction gas parameters. See [.config.toml](.config.toml) for a fully annotated template.
@@ -104,6 +117,7 @@ bridge/
 ├── server.go               # Service orchestration
 ├── config.go               # Configuration types
 ├── .config.toml            # Configuration template
+├── docs/                   # Operator and wallet guides
 ├── internal/
 │   ├── bridge/             # Source-chain logic
 │   ├── bridgehub/          # Destination-chain logic
@@ -149,4 +163,4 @@ This project handles cross-chain asset transfers. Review [SECURITY.md](SECURITY.
 
 ## Contributing
 
-Contributions are welcome. Please open an issue to discuss significant changes before submitting a pull request.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Open an issue to discuss significant changes before submitting a pull request.

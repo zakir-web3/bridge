@@ -2,9 +2,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-用于在 EVM 兼容区块链之间转移 ERC-20 资产的跨链桥。本仓库包含 Solidity 智能合约和 Go 中继服务，负责监听两条链、签名跨链消息并提交链上交易。源链 `Bridge` 合约参考自 [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol)。
+自托管的 EVM **lock-and-mint** 跨链桥：用户在源链 `Bridge` 锁定 ERC-20，Go 中继服务收集你自己的验证者集合的 EIP-712 签名，在目标链 `BridgeHub` 铸币。
 
-[English](README.md)
+面向自己运营验证者的应用链和 Token 发行方。这不是 LayerZero / Hyperlane 那种通用消息协议，也不是面向散户的兑换路由。
+
+源链 `Bridge` 合约参考自 [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol)。
+
+[English](README.md) · [文档中心](docs/README.md) · [贡献指南](CONTRIBUTING.md)
 
 ## 概述
 
@@ -84,6 +88,15 @@ cp .config.toml config.toml
 
 服务会启动两个区块扫描器（每条链各一个），并在 `send_finalize_withdrawals = true` 时可选运行提款最终确认任务。
 
+## 文档
+
+| 文档 | 内容 |
+|------|------|
+| [docs/README.md](docs/README.md) | 运维、存款/提款、钱包集成 |
+| [solidity/README.md](solidity/README.md) | 合约部署（`Bridge`、`BridgeHub`、代币对） |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 如何构建、测试和提交 PR |
+| [SECURITY.md](SECURITY.md) | 漏洞报告 |
+
 ## 配置说明
 
 `config.toml` 控制日志、缓存、网络端点、合约地址、扫描间隔、区块确认深度和交易 gas 参数。完整注释模板见 [.config.toml](.config.toml)。
@@ -104,6 +117,7 @@ bridge/
 ├── server.go               # 服务编排
 ├── config.go               # 配置类型定义
 ├── .config.toml            # 配置模板
+├── docs/                   # 运维与钱包集成指南
 ├── internal/
 │   ├── bridge/             # 源链逻辑
 │   ├── bridgehub/          # 目标链逻辑
@@ -149,4 +163,4 @@ npm run compile
 
 ## 贡献
 
-欢迎贡献代码。对于较大的改动，请先提交 issue 讨论后再发起 pull request。
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。较大改动请先开 issue 讨论后再提交 pull request。
