@@ -67,6 +67,7 @@ async function main() {
     await proxy.waitForDeployment();
     const bridgeHubAddress = await proxy.getAddress();
     console.log("BridgeHub 代理地址:", bridgeHubAddress);
+    console.log(`DEPLOYED_ADDRESS=${bridgeHubAddress}`);
 
     // 通过实现合约的 ABI 连接到代理地址（为避免 TS 类型告警，使用 any）
     const bridgeHub = BridgeHub.attach(bridgeHubAddress) as any;

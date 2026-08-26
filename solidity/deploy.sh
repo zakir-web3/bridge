@@ -55,6 +55,7 @@ fi
 
 if [ "$1" == "bridgeToken" ]; then
   echo "  CHAIN ID: $CHAIN_ID"
+  echo "  TOKEN_CHAIN_ID: ${TOKEN_CHAIN_ID:-$CHAIN_ID}"
   echo "  Token 地址: $TOKEN_ADDRESS"
   echo "  Bridged Token 地址: $BRIDGED_TOKEN_ADDRESS"
   echo "  Bridge Hub 地址: $BRIDGE_HUB_ADDRESS"

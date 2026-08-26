@@ -19,6 +19,17 @@ async function main() {
     await token.waitForDeployment();
     const tokenAddress = await token.getAddress();
     console.log("✅ BridgeERC20 部署地址:", tokenAddress);
+    console.log(`DEPLOYED_ADDRESS=${tokenAddress}`);
+
+    const mintTo = process.env.MINT_TO;
+    if (mintTo) {
+      const mintAmount = BigInt(
+        process.env.MINT_AMOUNT || "1000000000000000000"
+      );
+      const mintTx = await token.mint(mintTo, mintAmount);
+      await mintTx.wait();
+      console.log(`✅ 已向 ${mintTo} 铸造 ${mintAmount.toString()} wei`);
+    }
   } catch (error) {
     throw new DeploymentError(
       "BridgeERC20 合约部署失败",

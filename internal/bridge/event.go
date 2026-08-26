@@ -91,7 +91,7 @@ func (b *Bridge) GetFilterQuery(startBlock, endBlock uint64) []ethereum.FilterQu
 				{
 					common.HexToHash(ERC20TransferEventHash),
 				},
-				{},
+				nil, // any sender; empty slice encodes as [] and matches nothing in eth_getLogs
 				{
 					common.BytesToHash(b.cfg.BridgeAddress.Bytes()),
 				},

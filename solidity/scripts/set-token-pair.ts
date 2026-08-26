@@ -16,7 +16,8 @@ async function main() {
 
   // 从环境变量读取参数（也支持从命令行读取，优先环境变量）
   const bridgeHubAddress = process.env.BRIDGE_HUB_ADDRESS || process.argv[2];
-  const chainId = process.env.CHAIN_ID || process.argv[3];
+  const chainId =
+    process.env.TOKEN_CHAIN_ID || process.argv[3] || process.env.CHAIN_ID;
   const tokenAddress = process.env.TOKEN_ADDRESS || process.argv[4];
   const bridgedTokenAddress =
     process.env.BRIDGED_TOKEN_ADDRESS || process.argv[5];
@@ -25,8 +26,8 @@ async function main() {
   if (!chainId) {
     throw new ConfigurationError(
       "缺少链 ID",
-      "请通过环境变量 CHAIN_ID 或命令行参数提供",
-      "示例: CHAIN_ID=1 hardhat run scripts/set-token-pair.ts"
+      "请通过环境变量 TOKEN_CHAIN_ID / CHAIN_ID 或命令行参数提供",
+      "示例: TOKEN_CHAIN_ID=56 hardhat run scripts/set-token-pair.ts"
     );
   }
 

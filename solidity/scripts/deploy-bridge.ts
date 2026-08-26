@@ -88,6 +88,7 @@ async function main() {
     await bridge.waitForDeployment();
     const bridgeAddress = await bridge.getAddress();
     console.log("Bridge 部署地址:", bridgeAddress);
+    console.log(`DEPLOYED_ADDRESS=${bridgeAddress}`);
     const domainSeparator = await bridge.domainSeparator();
     console.log("Bridge 域分隔符:", domainSeparator);
     console.log("✅ Bridge 部署成功!");

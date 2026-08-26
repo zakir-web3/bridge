@@ -7,9 +7,18 @@ import "@nomicfoundation/hardhat-chai-matchers";
 import "@typechain/hardhat";
 import "dotenv/config";
 
+const hardhatChainId = parseInt(process.env.HARDHAT_CHAIN_ID || "31337", 10);
+const mineInterval = parseInt(process.env.HARDHAT_MINE_INTERVAL || "0", 10);
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
+    hardhat: {
+      chainId: hardhatChainId,
+      ...(mineInterval > 0
+        ? { mining: { auto: true, interval: mineInterval } }
+        : {}),
+    },
     localhost: {
       url: `${process.env.LOCAL_URL || "http://127.0.0.1:9545"}`,
     },

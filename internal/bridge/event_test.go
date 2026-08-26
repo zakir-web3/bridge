@@ -41,7 +41,7 @@ func TestGetFilterQuery_WatchesWhitelistTransfersIntoBridge(t *testing.T) {
 	require.Equal(t, []common.Address{tokenAddr}, transfer.Addresses)
 	require.Equal(t, [][]common.Hash{
 		{common.HexToHash(ERC20TransferEventHash)},
-		{},
+		nil,
 		{common.BytesToHash(bridgeAddr.Bytes())},
 	}, transfer.Topics)
 

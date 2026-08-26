@@ -20,3 +20,6 @@ lint:
 
 format:
 	golangci-lint fmt -v ./...
+
+e2e:
+	bash scripts/e2e.sh
