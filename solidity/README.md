@@ -1,6 +1,6 @@
 # Contracts
 
-Deploy `Bridge` on the **source** chain (lock / deposit) and `BridgeHub` on the **destination** chain (mint / withdraw). Use `deploy.sh` with Hardhat. Any EVM network with a stable RPC and a known chain ID works; `bsc` and `bscTestnet` are convenience presets.
+Deploy `Bridge` on the **source** chain (lock / deposit) and `BridgeHub` on the **custom** chain (mint / withdraw). Use `deploy.sh` with Hardhat. Any EVM network with a stable RPC and a known chain ID works; `bsc` and `bscTestnet` are convenience presets.
 
 [中文](README.zh-CN.md) · [Root README](../README.md)
 
@@ -26,7 +26,7 @@ Set `NETWORK` to a name from `hardhat.config.ts`:
 
 ## Environment variables
 
-Required for both contracts (must match on source and destination):
+Required for both contracts (must match on both chains):
 
 - `HOT_ADDRESSES` — comma-separated validator addresses
 - `COLD_ADDRESSES` — comma-separated cold validator addresses (may equal hot)
@@ -42,7 +42,7 @@ Deployer:
 Token pair (when calling `bridgeToken`):
 
 - `TOKEN_ADDRESS` — ERC-20 on the **source** chain
-- `BRIDGED_TOKEN_ADDRESS` — corresponding token on the **destination** chain
+- `BRIDGED_TOKEN_ADDRESS` — corresponding token on the **custom** chain
 - `BRIDGE_HUB_ADDRESS` — deployed `BridgeHub`
 
 `Bridge` parameters (optional, with defaults):
@@ -92,13 +92,13 @@ export PRIVATE_KEY=0xYOUR_KEY
 npx hardhat --network "$NETWORK" run scripts/deploy-bridge-token.ts
 ```
 
-## Deploy BridgeHub (destination chain)
+## Deploy BridgeHub (custom chain)
 
 ```bash
 export NETWORK=custom
 export CHAIN_ID=1337
 export PRIVATE_KEY=0xYOUR_KEY
-export ETH_RPC_URL=https://your-destination-rpc
+export ETH_RPC_URL=https://your-custom-rpc
 
 bash ./deploy.sh bridgeHub
 ```
@@ -123,7 +123,7 @@ export NETWORK=custom
 export PRIVATE_KEY=0xYOUR_KEY
 export CHAIN_ID=56
 export TOKEN_ADDRESS=0xSourceChainToken
-export BRIDGED_TOKEN_ADDRESS=0xDestinationChainToken
+export BRIDGED_TOKEN_ADDRESS=0xCustomChainToken
 export BRIDGE_HUB_ADDRESS=0xBridgeHub
 
 bash ./deploy.sh bridgeToken
@@ -131,13 +131,13 @@ bash ./deploy.sh bridgeToken
 
 ## Withdrawal fee
 
-Unset means free. Fees are per destination token.
+Unset means free. Fees are per custom-chain token.
 
 ```bash
 export NETWORK=custom
 export PRIVATE_KEY=0xYOUR_KEY
 export BRIDGE_HUB_ADDRESS=0xBridgeHub
-export BRIDGED_TOKEN_ADDRESS=0xDestinationChainToken
+export BRIDGED_TOKEN_ADDRESS=0xCustomChainToken
 export WITHDRAW_FEE=1000000000000000000
 
 bash ./deploy.sh setWithdrawFee
