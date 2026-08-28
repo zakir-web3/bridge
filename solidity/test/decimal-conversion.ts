@@ -182,6 +182,56 @@ describe("BridgeHub Decimal Conversion", function () {
     );
   });
 
+  it("rejects depositConfirm when decimal conversion truncates to zero", async function () {
+    const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
+    const src18 = await ERC20Mock.deploy("WETH", "WETH", 18);
+    const bridged6 = await ERC20Mock.deploy("USDC.b", "USDC.b", 6);
+
+    const src = await src18.getAddress();
+    const bridged = await bridged6.getAddress();
+    await bridgeHub.setTokenPair(
+      SRC_CHAIN_ID,
+      addressToBytes32(src),
+      18,
+      bridged
+    );
+
+    const amount = 999_999_999_999n; // truncates to 0 when scaling 18 -> 6 decimals
+    const deposit = {
+      user: addressToBytes32(user.address),
+      destination: user.address,
+      token: addressToBytes32(src),
+      amount,
+      chainId: SRC_CHAIN_ID,
+      blockNumber: 1n,
+      txHash: ethers.ZeroHash,
+      index: 2,
+    };
+    const sig = await signDeposit(deposit);
+
+    await expect(
+      bridgeHub.depositConfirm([
+        {
+          ...deposit,
+          signature: { r: sig.r, s: sig.s, v: sig.v },
+        },
+      ])
+    ).to.be.revertedWith("Mint amount too small");
+
+    expect(await bridged6.balanceOf(user.address)).to.equal(0n);
+    const message = await bridgeHub.makeDepositMessage(
+      deposit.user,
+      deposit.destination,
+      deposit.token,
+      deposit.amount,
+      deposit.chainId,
+      deposit.blockNumber,
+      deposit.txHash,
+      deposit.index
+    );
+    expect(await bridgeHub.processedMessages(message)).to.equal(false);
+  });
+
   it("writes 100e6 into the withdraw message when burning 100e18", async function () {
     await pairTokens(6);
     await bridgedToken.mint(user.address, 100_000_000_000_000_000_000n);

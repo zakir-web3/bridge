@@ -912,6 +912,7 @@ contract BridgeHub is
             // Convert amount based on decimal difference
             int8 decimalDiff = tokenDecimalDiff[data.chainId][data.token];
             uint256 mintAmount = _convertAmount(data.amount, decimalDiff);
+            require(mintAmount > 0, "Mint amount too small");
 
             // mint token to user
             IBridgedToken(bridgedToken).mint(data.destination, mintAmount);
