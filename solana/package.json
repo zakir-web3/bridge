@@ -9,7 +9,7 @@
     "deposit": "ts-node scripts/deposit.ts"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.31.1",
+    "@anchor-lang/core": "^1.1.2",
     "@solana/spl-token": "^0.4.9",
     "@solana/web3.js": "^1.95.4"
   },

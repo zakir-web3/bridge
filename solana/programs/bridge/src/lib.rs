@@ -55,7 +55,7 @@ pub mod bridge {
             // 构造跨程序调用上下文：指定 token_program 与 TransferChecked 账户布局
             CpiContext::new(
                 // SPL Token program 的 AccountInfo
-                ctx.accounts.token_program.to_account_info(),
+                Token::id(),
                 TransferChecked {
                     // 转出方：用户的 SPL 代币账户
                     from: ctx.accounts.user_token_account.to_account_info(),
@@ -211,7 +211,7 @@ pub struct Deposit<'info> {
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
-    // deposit 通过 CPI 调用 SPL Token，须传入 Token program
+    // CPI 到 SPL Token 时，Token Program 账户须出现在本指令的账户列表中
     pub token_program: Program<'info, Token>,
 }
 

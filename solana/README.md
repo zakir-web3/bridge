@@ -17,7 +17,7 @@ This program only **custodies SPL** and emits events. Validator signatures are v
 
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Solana CLI](https://docs.solanalabs.com/cli/install)
-- [Anchor 0.30.1](https://www.anchor-lang.com/docs/installation) (matches `Anchor.toml`)
+- [Anchor 1.1.2](https://www.anchor-lang.com/docs/installation) (matches `Anchor.toml`)
 - Node.js (for `anchor test`)
 
 Wallet and cluster are configured in `Anchor.toml` (`provider.wallet`, `provider.cluster`). Override RPC with:

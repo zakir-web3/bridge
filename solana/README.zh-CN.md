@@ -17,7 +17,7 @@ Relayer        →  扫描 DepositEvent  →  BridgeHub.depositConfirm (EVM)
 
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Solana CLI](https://docs.solanalabs.com/cli/install)
-- [Anchor 0.30.1](https://www.anchor-lang.com/docs/installation)（与 `Anchor.toml` 一致）
+- [Anchor 1.1.2](https://www.anchor-lang.com/docs/installation)（与 `Anchor.toml` 一致）
 - Node.js（运行 `anchor test`）
 
 钱包与集群在 `Anchor.toml` 的 `provider` 中配置。覆盖 RPC：
