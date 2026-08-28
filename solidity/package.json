@@ -30,7 +30,7 @@
     "chai": "^4.3.10",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.5",
-    "hardhat": "^2.19.4",
+    "hardhat": "^3.14.0",
     "hardhat-dependency-compiler": "^1.1.3",
     "hardhat-gas-reporter": "^1.0.10",
     "prettier": "^2.7.1",
