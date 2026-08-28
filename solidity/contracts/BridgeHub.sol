@@ -973,6 +973,11 @@ contract BridgeHub is
         ValidatorSetUpdate calldata validatorSet,
         Signature calldata signature
     ) external whenNotPaused nonReentrant onlyValidator {
+        require(
+            validatorSet.epoch > epoch,
+            "Stale validator set update"
+        );
+
         bytes32 message = makeUpdateValidatorSetMessage(
             validatorSet.epoch,
             validatorSet.hotAddresses,
