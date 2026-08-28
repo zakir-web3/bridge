@@ -5,6 +5,10 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const SRC_CHAIN_ID = 1337n;
 
+function addressToBytes32(address: string) {
+  return ethers.zeroPadValue(address, 32);
+}
+
 describe("BridgeHub core flows", function () {
   let bridgeHub: any;
   let srcToken: any;
@@ -22,7 +26,7 @@ describe("BridgeHub core flows", function () {
       chainId: bigint;
       blockNumber: bigint;
       txHash: string;
-      logIndex: bigint;
+      index: number;
     }
   ) {
     const network = await ethers.provider.getNetwork();
@@ -34,14 +38,14 @@ describe("BridgeHub core flows", function () {
     };
     const types = {
       Deposit: [
-        { name: "user", type: "address" },
+        { name: "user", type: "bytes32" },
         { name: "destination", type: "address" },
-        { name: "token", type: "address" },
+        { name: "token", type: "bytes32" },
         { name: "amount", type: "uint256" },
         { name: "chainId", type: "uint256" },
         { name: "blockNumber", type: "uint64" },
         { name: "txHash", type: "bytes32" },
-        { name: "logIndex", type: "uint64" },
+        { name: "index", type: "uint32" },
       ],
     };
     return ethers.Signature.from(
@@ -50,11 +54,14 @@ describe("BridgeHub core flows", function () {
   }
 
   async function pairTokens(srcDecimals: number) {
+    const src = await srcToken.getAddress();
+    const bridged = await bridgedToken.getAddress();
+    const srcBytes32 = addressToBytes32(src);
     await bridgeHub.setTokenPair(
       SRC_CHAIN_ID,
-      await srcToken.getAddress(),
-      await bridgedToken.getAddress(),
-      srcDecimals
+      srcBytes32,
+      srcDecimals,
+      bridged
     );
   }
 
@@ -86,35 +93,37 @@ describe("BridgeHub core flows", function () {
   it("rejects depositConfirm from a non-validator", async function () {
     await pairTokens(6);
     const deposit = {
-      user: user.address,
+      user: addressToBytes32(user.address),
       destination: user.address,
-      token: await srcToken.getAddress(),
+      token: addressToBytes32(await srcToken.getAddress()),
       amount: 100_000_000n,
       chainId: SRC_CHAIN_ID,
       blockNumber: 1n,
       txHash: ethers.ZeroHash,
-      logIndex: 0n,
+      index: 0,
     };
     const sig = await signDeposit(admin, deposit);
 
     await expect(
-      bridgeHub.connect(user).depositConfirm([
-        { ...deposit, signature: { r: sig.r, s: sig.s, v: sig.v } },
-      ])
+      bridgeHub
+        .connect(user)
+        .depositConfirm([
+          { ...deposit, signature: { r: sig.r, s: sig.s, v: sig.v } },
+        ])
     ).to.be.revertedWith("Signer is not a validator");
   });
 
   it("rejects a second depositConfirm for the same message", async function () {
     await pairTokens(6);
     const deposit = {
-      user: user.address,
+      user: addressToBytes32(user.address),
       destination: user.address,
-      token: await srcToken.getAddress(),
+      token: addressToBytes32(await srcToken.getAddress()),
       amount: 100_000_000n,
       chainId: SRC_CHAIN_ID,
       blockNumber: 1n,
       txHash: ethers.ZeroHash,
-      logIndex: 0n,
+      index: 0,
     };
     const sig = await signDeposit(admin, deposit);
     const payload = [
@@ -211,14 +220,14 @@ describe("BridgeHub core flows", function () {
 
     const amount = 1_000_000_000_000_000_000n;
     const deposit = {
-      user: user.address,
+      user: addressToBytes32(user.address),
       destination: user.address,
-      token: await srcToken.getAddress(),
+      token: addressToBytes32(await srcToken.getAddress()),
       amount,
       chainId: SRC_CHAIN_ID,
       blockNumber: 1n,
       txHash: ethers.ZeroHash,
-      logIndex: 1n,
+      index: 1,
     };
     const sig = await signDeposit(admin, deposit);
 

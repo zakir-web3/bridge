@@ -15,12 +15,12 @@
 
 `NETWORK` 对应 `hardhat.config.ts` 中的名称：
 
-| `NETWORK` | 含义 |
-|-----------|------|
-| `custom` | 任意 EVM 链。设置 `ETH_RPC_URL` 和 `CHAIN_ID`（默认 `1337`） |
-| `bsc` | BSC 主网预设（`chainId = 56`） |
-| `bscTestnet` | BSC 测试网预设（`chainId = 97`） |
-| `localhost` | 本地 Hardhat / Anvil |
+| `NETWORK`    | 含义                                                         |
+| ------------ | ------------------------------------------------------------ |
+| `custom`     | 任意 EVM 链。设置 `ETH_RPC_URL` 和 `CHAIN_ID`（默认 `1337`） |
+| `bsc`        | BSC 主网预设（`chainId = 56`）                               |
+| `bscTestnet` | BSC 测试网预设（`chainId = 97`）                             |
+| `localhost`  | 本地 Hardhat / Anvil                                         |
 
 `ETH_RPC_URL` 是当前正在部署的那条链的 RPC，不限于 Ethereum。
 

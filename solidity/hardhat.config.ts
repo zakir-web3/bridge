@@ -4,6 +4,7 @@ import "hardhat-gas-reporter";
 import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-verify";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import "dotenv/config";
 

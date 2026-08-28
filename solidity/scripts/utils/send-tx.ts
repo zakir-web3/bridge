@@ -13,7 +13,10 @@ export async function sendTx(
 
   let next = nextNonce.get(signer);
   if (next === undefined) {
-    next = await provider.getTransactionCount(await signer.getAddress(), "latest");
+    next = await provider.getTransactionCount(
+      await signer.getAddress(),
+      "latest"
+    );
   }
 
   const tx = await send(next);

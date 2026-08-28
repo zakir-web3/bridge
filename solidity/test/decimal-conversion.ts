@@ -5,6 +5,10 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const SRC_CHAIN_ID = 1337n;
 
+function addressToBytes32(address: string) {
+  return ethers.zeroPadValue(address, 32);
+}
+
 describe("BridgeHub Decimal Conversion", function () {
   let bridgeHub: any;
   let srcToken: any;
@@ -20,7 +24,7 @@ describe("BridgeHub Decimal Conversion", function () {
     chainId: bigint;
     blockNumber: bigint;
     txHash: string;
-    logIndex: bigint;
+    index: number;
   }) {
     const network = await ethers.provider.getNetwork();
     const domain = {
@@ -31,18 +35,30 @@ describe("BridgeHub Decimal Conversion", function () {
     };
     const types = {
       Deposit: [
-        { name: "user", type: "address" },
+        { name: "user", type: "bytes32" },
         { name: "destination", type: "address" },
-        { name: "token", type: "address" },
+        { name: "token", type: "bytes32" },
         { name: "amount", type: "uint256" },
         { name: "chainId", type: "uint256" },
         { name: "blockNumber", type: "uint64" },
         { name: "txHash", type: "bytes32" },
-        { name: "logIndex", type: "uint64" },
+        { name: "index", type: "uint32" },
       ],
     };
     const raw = await admin.signTypedData(domain, types, deposit);
     return ethers.Signature.from(raw);
+  }
+
+  async function pairTokens(srcDecimals: number) {
+    const src = await srcToken.getAddress();
+    const bridged = await bridgedToken.getAddress();
+    const srcBytes32 = addressToBytes32(src);
+    await bridgeHub.setTokenPair(
+      SRC_CHAIN_ID,
+      srcBytes32,
+      srcDecimals,
+      bridged
+    );
   }
 
   beforeEach(async function () {
@@ -77,47 +93,56 @@ describe("BridgeHub Decimal Conversion", function () {
 
   it("returns 0 for an unconfigured tokenDecimalDiff", async function () {
     expect(
-      await bridgeHub.tokenDecimalDiff(SRC_CHAIN_ID, admin.address)
+      await bridgeHub.tokenDecimalDiff(
+        SRC_CHAIN_ID,
+        addressToBytes32(admin.address)
+      )
     ).to.equal(0n);
   });
 
-  it("stores -12 / 12 when pairing a 6-decimal token with an 18-decimal bridged token", async function () {
+  it("stores -12 on src pair when pairing a 6-decimal token with an 18-decimal bridged token", async function () {
+    const src = await srcToken.getAddress();
+    const bridged = await bridgedToken.getAddress();
     await bridgeHub.setTokenPair(
       SRC_CHAIN_ID,
-      await srcToken.getAddress(),
-      await bridgedToken.getAddress(),
-      6
+      addressToBytes32(src),
+      6,
+      bridged
     );
 
     expect(
-      await bridgeHub.tokenDecimalDiff(SRC_CHAIN_ID, await srcToken.getAddress())
+      await bridgeHub.tokenDecimalDiff(SRC_CHAIN_ID, addressToBytes32(src))
     ).to.equal(-12n);
+  });
+
+  it("stores 12 on dst pair for withdraw decimal conversion", async function () {
+    const src = await srcToken.getAddress();
+    const bridged = await bridgedToken.getAddress();
+    await bridgeHub.setTokenPair(
+      SRC_CHAIN_ID,
+      addressToBytes32(src),
+      6,
+      bridged
+    );
+
     expect(
-      await bridgeHub.tokenDecimalDiff(
-        SRC_CHAIN_ID,
-        await bridgedToken.getAddress()
-      )
+      await bridgeHub.tokenDecimalDiff(SRC_CHAIN_ID, addressToBytes32(bridged))
     ).to.equal(12n);
   });
 
   it("mints 100e18 on depositConfirm of 100e6", async function () {
-    await bridgeHub.setTokenPair(
-      SRC_CHAIN_ID,
-      await srcToken.getAddress(),
-      await bridgedToken.getAddress(),
-      6
-    );
+    await pairTokens(6);
 
     const amount = 100_000_000n;
     const deposit = {
-      user: user.address,
+      user: addressToBytes32(user.address),
       destination: user.address,
-      token: await srcToken.getAddress(),
+      token: addressToBytes32(await srcToken.getAddress()),
       amount,
       chainId: SRC_CHAIN_ID,
       blockNumber: 1n,
       txHash: ethers.ZeroHash,
-      logIndex: 0n,
+      index: 0,
     };
     const sig = await signDeposit(deposit);
 
@@ -134,12 +159,7 @@ describe("BridgeHub Decimal Conversion", function () {
   });
 
   it("writes 100e6 into the withdraw message when burning 100e18", async function () {
-    await bridgeHub.setTokenPair(
-      SRC_CHAIN_ID,
-      await srcToken.getAddress(),
-      await bridgedToken.getAddress(),
-      6
-    );
+    await pairTokens(6);
     await bridgedToken.mint(user.address, 100_000_000_000_000_000_000n);
     await bridgedToken
       .connect(user)

@@ -122,11 +122,11 @@ npm run deposit -- <MINT_PUBKEY> <AMOUNT> <EVM_DESTINATION>
 
 在 `config.toml` 中配置 `[solana_bridge]`（模板见 `.config.toml`）：
 
-- `chain_id` — 如 devnet 用 `900001`（须与 EVM `setSrcTokenPair` 一致）
+- `chain_id` — 如 devnet 用 `900001`（须与 EVM `setTokenPair` 一致）
 - `program_id` — 部署后的程序 ID
 - `bridge_mints` — SPL mint 白名单
 
-Relayer 解析日志（`Program data:` base64），组装 EIP-712 `Deposit`（含 `slot`、`txSigHash`、`instructionIndex`），调用 `BridgeHub.depositConfirm`。
+Relayer 解析日志（`Program data:` base64），组装 EIP-712 `Deposit`（含 `blockNumber`、`txHash`、`index`），调用 `BridgeHub.depositConfirm`。
 
 完整步骤见 `internal/solana/` 与 `scripts/solana-e2e.sh`。
 
@@ -154,11 +154,11 @@ solana/
 
 ## Solana chainId（EVM 配置）
 
-在 relayer 与 `setSrcTokenPair` 中使用固定的 `uint256`：
+在 relayer 与 `setTokenPair` 中使用固定的 `uint256`：
 
 | 网络     | 建议 `chain_id` |
 | -------- | ----------------- |
 | Devnet   | `900001`          |
 | Mainnet  | `1399811149`      |
 
-须与 Solana 配置、EIP-712 `Deposit.chainId`、`setSrcTokenPair` 全链路一致。
+须与 Solana 配置、EIP-712 `Deposit.chainId`、`setTokenPair` 全链路一致。

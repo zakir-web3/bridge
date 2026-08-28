@@ -122,11 +122,11 @@ The script uses `ANCHOR_WALLET` as the depositor and creates the user ATA if nee
 
 Configure `[solana_bridge]` in `config.toml` (see `.config.toml` template):
 
-- `chain_id` — e.g. `900001` for devnet (must match EVM `setSrcTokenPair`)
+- `chain_id` — e.g. `900001` for devnet (must match EVM `setTokenPair`)
 - `program_id` — deployed program ID
 - `bridge_mints` — SPL mint whitelist
 
-Relayer parses logs (`Program data:` base64), builds EIP-712 `Deposit` with `slot`, `txSigHash`, `instructionIndex`, and calls `BridgeHub.depositConfirm`.
+Relayer parses logs (`Program data:` base64), builds EIP-712 `Deposit` with `blockNumber`, `txHash`, `index`, and calls `BridgeHub.depositConfirm`.
 
 See `internal/solana/` and `scripts/solana-e2e.sh` for the full checklist.
 
@@ -154,11 +154,11 @@ solana/
 
 ## Solana chain ID (EVM config)
 
-Use a fixed `uint256` in relayer + `setSrcTokenPair`:
+Use a fixed `uint256` in relayer + `setTokenPair`:
 
 | Network | Suggested `chain_id` |
 | ------- | -------------------- |
 | Devnet  | `900001`             |
 | Mainnet | `1399811149`         |
 
-Must be consistent across Solana config, EIP-712 `Deposit.chainId`, and BridgeHub `setSrcTokenPair`.
+Must be consistent across Solana config, EIP-712 `Deposit.chainId`, and BridgeHub `setTokenPair`.

@@ -6,6 +6,10 @@ import {
   PermissionError,
 } from "./utils/error-handler";
 
+function addressToBytes32(address: string) {
+  return ethers.zeroPadValue(address, 32);
+}
+
 async function main() {
   console.log("开始设置 Token Pair...");
 
@@ -14,7 +18,6 @@ async function main() {
   const balance = await ethers.provider.getBalance(singer.address);
   console.log("账户余额:", ethers.formatEther(balance));
 
-  // 从环境变量读取参数（也支持从命令行读取，优先环境变量）
   const bridgeHubAddress = process.env.BRIDGE_HUB_ADDRESS || process.argv[2];
   const chainId =
     process.env.TOKEN_CHAIN_ID || process.argv[3] || process.env.CHAIN_ID;
@@ -22,6 +25,7 @@ async function main() {
   const bridgedTokenAddress =
     process.env.BRIDGED_TOKEN_ADDRESS || process.argv[5];
   const tokenDecimal = process.env.TOKEN_DECIMAL || process.argv[6];
+  const pairMode = process.env.PAIR_MODE || "evm";
 
   if (!chainId) {
     throw new ConfigurationError(
@@ -39,12 +43,9 @@ async function main() {
     );
   }
 
-  // 验证地址格式
   validateAddress(bridgeHubAddress, "BridgeHub 合约");
-  validateAddress(tokenAddress, "源链代币");
   validateAddress(bridgedTokenAddress, "桥接代币");
 
-  // 验证链 ID
   const chainIdNum = parseInt(chainId, 10);
   if (isNaN(chainIdNum) || chainIdNum <= 0) {
     throw new ConfigurationError(
@@ -54,7 +55,6 @@ async function main() {
     );
   }
 
-  // 验证 token 精度
   const tokenDecimalNum = parseInt(tokenDecimal, 10);
   if (isNaN(tokenDecimalNum) || tokenDecimalNum < 0 || tokenDecimalNum > 18) {
     throw new ConfigurationError(
@@ -64,21 +64,40 @@ async function main() {
     );
   }
 
-  // 打印参数预览
-  console.log("\n参数预览:");
+  let srcTokenBytes32: string;
+  if (pairMode === "solana") {
+    const srcTokenHex = process.env.SRC_TOKEN_BYTES32 || tokenAddress;
+    if (
+      !srcTokenHex ||
+      !srcTokenHex.startsWith("0x") ||
+      srcTokenHex.length !== 66
+    ) {
+      throw new ConfigurationError(
+        "无效的 Solana mint bytes32",
+        `SRC_TOKEN_BYTES32: ${srcTokenHex}`,
+        "请提供 32 字节的 hex，例如 0x..."
+      );
+    }
+    srcTokenBytes32 = srcTokenHex;
+    console.log("\n参数预览 (Solana src):");
+    console.log(`  源链 SPL mint (bytes32): ${srcTokenBytes32}`);
+  } else {
+    validateAddress(tokenAddress, "源链代币");
+    srcTokenBytes32 = addressToBytes32(tokenAddress);
+    console.log("\n参数预览 (EVM src):");
+    console.log(`  源链代币地址: ${tokenAddress}`);
+  }
+
   console.log(`  BridgeHub 合约地址: ${bridgeHubAddress}`);
   console.log(`  链 ID: ${chainIdNum}`);
-  console.log(`  源链代币地址: ${tokenAddress}`);
   console.log(`  源链代币精度: ${tokenDecimalNum}`);
   console.log(`  桥接代币地址: ${bridgedTokenAddress}`);
 
   try {
-    // 连接到 BridgeHub 合约
     console.log("\n=== 连接到 BridgeHub 合约 ===");
     const BridgeHub = await ethers.getContractFactory("BridgeHub");
     const bridgeHub = BridgeHub.attach(bridgeHubAddress) as any;
 
-    // 检查调用者是否有 ADMIN_ROLE
     console.log("检查管理员权限...");
     const ADMIN_ROLE = await bridgeHub.ADMIN_ROLE();
     const hasAdminRole = await bridgeHub.hasRole(ADMIN_ROLE, singer.address);
@@ -87,32 +106,28 @@ async function main() {
       throw new ConfigurationError(
         "权限不足",
         `账户 ${singer.address} 没有 ADMIN_ROLE 权限`,
-        "请使用具有管理员权限的账户，或联系合约管理员授予权限"
+        "请使用具有管理员权限的账户"
       );
     }
     console.log("✅ 权限验证通过");
 
-    // 检查当前 token pair 设置
-    console.log("检查当前 token pair 设置...");
     const currentBridgedToken = await bridgeHub.tokenPair(
       chainIdNum,
-      tokenAddress
+      srcTokenBytes32
     );
 
-    if (currentBridgedToken !== ethers.ZeroAddress) {
+    if (currentBridgedToken !== ethers.ZeroHash) {
       throw new Error(
-        `链 ${chainIdNum} 上的代币 ${tokenAddress} 已经映射到 ${currentBridgedToken}`
+        `链 ${chainIdNum} 上的源 token ${srcTokenBytes32} 已经映射到 ${currentBridgedToken}`
       );
     }
-    console.log("✅ 当前没有映射关系，可以安全设置");
 
-    // 执行 setTokenPair 调用
     console.log("\n=== 执行 setTokenPair ===");
     const tx = await bridgeHub.setTokenPair(
       chainIdNum,
-      tokenAddress,
-      bridgedTokenAddress,
-      tokenDecimalNum
+      srcTokenBytes32,
+      tokenDecimalNum,
+      bridgedTokenAddress
     );
 
     console.log("交易已提交，等待确认...");
@@ -121,37 +136,37 @@ async function main() {
     const receipt = await tx.wait();
     console.log("✅ 交易确认成功!");
     console.log("区块号:", receipt?.blockNumber);
-    console.log("Gas 使用量:", receipt?.gasUsed?.toString());
 
-    // 验证设置结果
-    console.log("\n=== 验证设置结果 ===");
-    const newBridgedToken = await bridgeHub.tokenPair(chainIdNum, tokenAddress);
-
-    if (newBridgedToken === bridgedTokenAddress) {
-      console.log("✅ Token Pair 设置成功!");
-      console.log(
-        `链 ${chainIdNum} 上的代币 ${tokenAddress} 已映射到 ${bridgedTokenAddress}`
+    if (pairMode === "evm") {
+      const remoteToken = await bridgeHub.tokenPair(
+        chainIdNum,
+        ethers.zeroPadValue(bridgedTokenAddress, 32)
       );
-
-      // 验证精度差值存储
-      try {
-        const decimalDiff = await bridgeHub.tokenDecimalDiff(
-          chainIdNum,
-          tokenAddress
-        );
-        console.log(`✅ 精度差值已存储: ${decimalDiff}`);
-      } catch (e) {
-        console.log(
-          "⚠ 无法验证精度差值，但 Token Pair 已设置"
+      if (remoteToken.toLowerCase() !== srcTokenBytes32.toLowerCase()) {
+        throw new ConfigurationError(
+          "Withdraw token pair 设置失败",
+          `期望: ${srcTokenBytes32}, 实际: ${remoteToken}`,
+          "请检查交易是否成功执行"
         );
       }
-    } else {
+      console.log("✅ Withdraw 映射已自动配置");
+    }
+
+    const newBridgedToken = await bridgeHub.tokenPair(
+      chainIdNum,
+      srcTokenBytes32
+    );
+    if (
+      newBridgedToken.toLowerCase() !==
+      ethers.zeroPadValue(bridgedTokenAddress, 32).toLowerCase()
+    ) {
       throw new ConfigurationError(
         "Token Pair 设置失败",
         `期望: ${bridgedTokenAddress}, 实际: ${newBridgedToken}`,
         "请检查交易是否成功执行"
       );
     }
+    console.log("✅ Token Pair 设置成功!");
   } catch (error) {
     if (error instanceof ConfigurationError) {
       throw error;

@@ -14,8 +14,7 @@ async function main() {
   const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
   const DESTINATION_ADDRESS = process.env.DESTINATION_ADDRESS;
   const AMOUNT = process.env.AMOUNT || "1000000000000000000";
-  const CHAIN_ID =
-    process.env.TOKEN_CHAIN_ID || process.env.CHAIN_ID || "56";
+  const CHAIN_ID = process.env.TOKEN_CHAIN_ID || process.env.CHAIN_ID || "56";
 
   if (!BRIDGE_HUB_CONTRACT_ADDRESS) {
     throw new Error("请设置环境变量 BRIDGE_HUB_CONTRACT_ADDRESS");
@@ -61,12 +60,16 @@ async function main() {
     );
   }
 
-  const bridgeToken = await bridgeHub.tokenPair(chainId, TOKEN_ADDRESS);
-  if (bridgeToken === ethers.ZeroAddress) {
+  const bridgeTokenBytes32 = await bridgeHub.tokenPair(
+    chainId,
+    ethers.zeroPadValue(TOKEN_ADDRESS, 32)
+  );
+  if (bridgeTokenBytes32 === ethers.ZeroHash) {
     throw new Error(
       `链 ID ${chainId.toString()} 上的代币 ${TOKEN_ADDRESS} 未配置代币对`
     );
   }
+  const bridgeToken = ethers.getAddress("0x" + bridgeTokenBytes32.slice(26));
   console.log(`🔗 桥接代币地址: ${bridgeToken}`);
 
   if (allowance < amount) {

@@ -1,4 +1,5 @@
 import { ethers, upgrades } from "hardhat";
+import { BridgeHub } from "../typechain-types";
 import {
   validateAddress,
   handleError,
@@ -31,7 +32,7 @@ async function main() {
     // Step 1: 验证当前代理的状态
     console.log("=== Step 1: 验证当前代理状态 ===");
     const BridgeHubV1 = await ethers.getContractFactory("BridgeHub");
-    const proxyInstance = BridgeHubV1.attach(proxyAddress);
+    const proxyInstance = BridgeHubV1.attach(proxyAddress) as BridgeHub;
 
     // 获取当前信息
     const currentEpoch = await proxyInstance.epoch();
@@ -42,7 +43,10 @@ async function main() {
 
     // 检查是否有足够的权限
     const ADMIN_ROLE = await proxyInstance.ADMIN_ROLE();
-    const hasAdminRole = await proxyInstance.hasRole(ADMIN_ROLE, signer.address);
+    const hasAdminRole = await proxyInstance.hasRole(
+      ADMIN_ROLE,
+      signer.address
+    );
 
     if (!hasAdminRole) {
       throw new PermissionError(
@@ -76,7 +80,7 @@ async function main() {
     );
 
     await deployedImpl.waitForDeployment();
-    const implAddress = await ethers.provider.getStorageAt(
+    const implAddress = await ethers.provider.getStorage(
       proxyAddress,
       "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
     );
@@ -86,7 +90,7 @@ async function main() {
 
     // Step 4: 验证升级
     console.log("=== Step 4: 验证升级结果 ===");
-    const upgradedInstance = BridgeHubV2.attach(proxyAddress);
+    const upgradedInstance = BridgeHubV2.attach(proxyAddress) as BridgeHub;
 
     // 验证数据完整性
     const newEpoch = await upgradedInstance.epoch();
@@ -101,7 +105,10 @@ async function main() {
     // 验证新增的映射存在
     try {
       // 测试新增的 tokenDecimalDiff 映射
-      const testDiff = await upgradedInstance.tokenDecimalDiff(1, signer.address);
+      const testDiff = await upgradedInstance.tokenDecimalDiff(
+        1,
+        ethers.zeroPadValue(signer.address, 32)
+      );
       console.log(`✓ 新增的 tokenDecimalDiff mapping 可以访问`);
     } catch (e) {
       console.log(`⚠ 无法验证 tokenDecimalDiff，但这可能是正常的`);
@@ -116,7 +123,7 @@ async function main() {
     console.log(`升级账户:     ${signer.address}`);
     console.log(`\n新增功能:`);
     console.log(`  • setTokenPair 方法新增 tokenDecimal 参数`);
-    console.log(`  • 自动验证 bridgedToken 是否为有效 ERC20`);
+    console.log(`  • 自动验证 dstToken 是否为有效 ERC20`);
     console.log(`  • 自动计算并存储精度差值`);
     console.log(`  • deposit/withdraw 时自动进行精度转换`);
     console.log(`\n下一步操作:`);
@@ -126,9 +133,7 @@ async function main() {
     console.log(
       `     示例: npx hardhat run scripts/set-token-pair.ts --network <network>`
     );
-    console.log(
-      `  2. 参考 DECIMAL_CONVERSION.md 了解精度处理的详细信息`
-    );
+    console.log(`  2. 参考 DECIMAL_CONVERSION.md 了解精度处理的详细信息`);
   } catch (error) {
     if (
       error instanceof ConfigurationError ||

@@ -15,12 +15,12 @@ Deploy `Bridge` on the **source** chain (lock / deposit) and `BridgeHub` on the 
 
 Set `NETWORK` to a name from `hardhat.config.ts`:
 
-| `NETWORK` | Meaning |
-|-----------|---------|
-| `custom` | Any EVM chain. Set `ETH_RPC_URL` and `CHAIN_ID` (default `1337`) |
-| `bsc` | BSC mainnet preset (`chainId = 56`) |
-| `bscTestnet` | BSC testnet preset (`chainId = 97`) |
-| `localhost` | Local Hardhat / Anvil node |
+| `NETWORK`    | Meaning                                                          |
+| ------------ | ---------------------------------------------------------------- |
+| `custom`     | Any EVM chain. Set `ETH_RPC_URL` and `CHAIN_ID` (default `1337`) |
+| `bsc`        | BSC mainnet preset (`chainId = 56`)                              |
+| `bscTestnet` | BSC testnet preset (`chainId = 97`)                              |
+| `localhost`  | Local Hardhat / Anvil node                                       |
 
 `ETH_RPC_URL` is the RPC for whichever network you are deploying to, not Ethereum-only.
 

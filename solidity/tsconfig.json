@@ -6,6 +6,8 @@
       "es2020",
       "dom"
     ],
+    "types": ["mocha", "chai", "node"],
+    "typeRoots": ["./node_modules/@types"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -13,11 +15,9 @@
     "resolveJsonModule": true
   },
   "include": [
-    "./typechain-types",
-    "./*.ts",
-    "./*/*.ts"
-  ],
-  "files": [
-    "./hardhat.config.ts"
+    "./hardhat.config.ts",
+    "./scripts",
+    "./test",
+    "./typechain-types"
   ]
 }
