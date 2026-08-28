@@ -66,19 +66,36 @@ anchor deploy --provider.cluster devnet
 
 ## 链上初始化
 
+配置 RPC 与钱包（或使用 `Anchor.toml` 的 `provider`）：
+
+```bash
+export ANCHOR_PROVIDER_URL=https://api.devnet.solana.com
+export ANCHOR_WALLET=~/.config/solana/id.json
+```
+
 ### 1. initialize
 
 每个部署调用一次，创建 `config` PDA（`seeds = ["config"]`），设置 `admin`、`paused = false`。
 
+```bash
+npm run initialize
+# 或：anchor deploy --provider.cluster devnet && npm run initialize
+```
+
 ### 2. initialize_vault（每个 SPL mint）
 
-每种要跨的 SPL mint 在用户 deposit 前必须先初始化 vault：
+每种要跨的 SPL mint 在用户 deposit 前必须先初始化 vault。每个 mint 单独执行一次：
 
 - `vault_state` PDA：`seeds = ["vault_state", mint]`
 - `vault_authority` PDA：`seeds = ["vault", mint]`
 - `vault_token_account`：`vault_authority` 的 ATA
 
-账户组装参考 `tests/bridge.ts`。
+```bash
+npm run initialize-vault -- <MINT_PUBKEY>
+# 或：MINT=<MINT_PUBKEY> npm run initialize-vault
+```
+
+账户组装参考 `scripts/initialize-vault.ts` 与 `tests/bridge.ts`。
 
 ### 3. deposit
 
@@ -88,19 +105,18 @@ anchor deploy --provider.cluster devnet
 - 通过 `transfer_checked` 将 SPL 从用户 ATA 转入 vault ATA
 - 发出 `DepositEvent { user, destination, mint, amount, slot }`
 
-## 发送测试 deposit（Go）
+## 发送测试 deposit
 
-在 devnet 完成程序部署与 vault 初始化后，在仓库根目录：
+在 devnet 完成程序部署与 vault 初始化后：
 
 ```bash
-export SOLANA_RPC_URL=https://api.devnet.solana.com
-export MINT=<SPL_mint_pubkey>
-export SOLANA_KEYPAIR=~/.config/solana/id.json
-export DESTINATION=0x1234567890123456789012345678901234567890
-export AMOUNT=100000
-
-go run ./cmd/solana-deposit
+npm run deposit -- <MINT_PUBKEY> <AMOUNT> <EVM_DESTINATION>
+# 或：MINT=<MINT_PUBKEY> AMOUNT=<AMOUNT> DESTINATION=0x... npm run deposit
 ```
+
+`AMOUNT` 为 SPL 最小单位（例如 6 位小数时 `1000000` = 1 个 token）。`DESTINATION` 为 20 字节 EVM 收款地址。
+
+脚本以 `ANCHOR_WALLET` 作为存款用户；若用户 ATA 不存在会自动创建。
 
 ## Relayer 配置
 
@@ -129,6 +145,9 @@ Relayer 解析日志（`Program data:` base64），组装 EIP-712 `Deposit`（�
 solana/
   Anchor.toml
   programs/bridge/src/lib.rs
+  scripts/initialize.ts
+  scripts/initialize-vault.ts
+  scripts/deposit.ts
   tests/bridge.ts
   package.json
 ```

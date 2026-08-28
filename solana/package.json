@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "anchor test"
+    "test": "anchor test",
+    "initialize": "ts-node scripts/initialize.ts",
+    "initialize-vault": "ts-node scripts/initialize-vault.ts",
+    "deposit": "ts-node scripts/deposit.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
@@ -17,6 +20,7 @@
     "chai": "^4.5.0",
     "mocha": "^10.8.2",
     "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
   }
 }

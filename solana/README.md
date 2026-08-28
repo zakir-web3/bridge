@@ -66,19 +66,36 @@ After deploy, record the program ID (or use the one in `Anchor.toml` if you depl
 
 ## On-chain setup
 
+Set RPC and wallet (or rely on `Anchor.toml` `provider`):
+
+```bash
+export ANCHOR_PROVIDER_URL=https://api.devnet.solana.com
+export ANCHOR_WALLET=~/.config/solana/id.json
+```
+
 ### 1. Initialize config
 
-From tests or your own client, call `initialize` once per deployment. Creates the `config` PDA (`seeds = ["config"]`) with `admin` and `paused = false`.
+Run once per deployment. Creates the `config` PDA (`seeds = ["config"]`) with `admin` and `paused = false`.
+
+```bash
+npm run initialize
+# or: anchor deploy --provider.cluster devnet && npm run initialize
+```
 
 ### 2. Initialize vault per SPL mint
 
-Each bridged SPL mint needs `initialize_vault` before users can deposit:
+Each bridged SPL mint needs `initialize_vault` before users can deposit. Run once per mint:
 
 - `vault_state` PDA: `seeds = ["vault_state", mint]`
 - `vault_authority` PDA: `seeds = ["vault", mint]`
 - `vault_token_account`: ATA owned by `vault_authority`
 
-See `tests/bridge.ts` for account wiring.
+```bash
+npm run initialize-vault -- <MINT_PUBKEY>
+# or: MINT=<MINT_PUBKEY> npm run initialize-vault
+```
+
+See `scripts/initialize-vault.ts` and `tests/bridge.ts` for account wiring.
 
 ### 3. User deposit
 
@@ -88,19 +105,18 @@ Instruction `deposit(destination: [u8; 20], amount: u64)`:
 - Transfers SPL from user ATA to vault ATA via `transfer_checked`
 - Emits `DepositEvent { user, destination, mint, amount, slot }`
 
-## Send a test deposit (Go)
+## Send a test deposit
 
-From the repo root, after program + vault are set up on devnet:
+After program + vault are set up on devnet:
 
 ```bash
-export SOLANA_RPC_URL=https://api.devnet.solana.com
-export MINT=<SPL_mint_pubkey>
-export SOLANA_KEYPAIR=~/.config/solana/id.json
-export DESTINATION=0x1234567890123456789012345678901234567890
-export AMOUNT=100000
-
-go run ./cmd/solana-deposit
+npm run deposit -- <MINT_PUBKEY> <AMOUNT> <EVM_DESTINATION>
+# or: MINT=<MINT_PUBKEY> AMOUNT=<AMOUNT> DESTINATION=0x... npm run deposit
 ```
+
+`AMOUNT` is in SPL smallest units (e.g. `1000000` = 1 token with 6 decimals). `DESTINATION` is the 20-byte EVM address where `BridgeHub` mints bridged tokens.
+
+The script uses `ANCHOR_WALLET` as the depositor and creates the user ATA if needed.
 
 ## Relayer integration
 
@@ -129,6 +145,9 @@ See `internal/solana/` and `scripts/solana-e2e.sh` for the full checklist.
 solana/
   Anchor.toml
   programs/bridge/src/lib.rs   # program logic
+  scripts/initialize.ts          # one-time config init
+  scripts/initialize-vault.ts    # per-mint vault init
+  scripts/deposit.ts             # test deposit
   tests/bridge.ts                # integration tests
   package.json
 ```
