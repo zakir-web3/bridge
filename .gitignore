@@ -6,3 +6,5 @@ bin
 *.db
 .idea/
 docs/
+solidity/forge-out/
+solidity/forge-cache/

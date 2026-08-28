@@ -1,3 +1,5 @@
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { ethers, upgrades } from "hardhat";
 import { BridgeHub } from "../typechain-types";
 import {
@@ -6,6 +8,37 @@ import {
   ConfigurationError,
   PermissionError,
 } from "./utils/error-handler";
+
+function printForgeStorageLayout(contractName: string) {
+  const foundryToml = "foundry.toml";
+  if (!existsSync(foundryToml)) {
+    console.log(
+      "ℹ 未找到 foundry.toml，跳过 forge inspect storage-layout（可用 upgrades-core 校验）"
+    );
+    return;
+  }
+
+  try {
+    const output = execSync(
+      `forge inspect ${contractName} storage-layout --json`,
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    const layout = JSON.parse(output) as {
+      storage?: Array<{ label: string; slot: string; type: string }>;
+    };
+    const rows = layout.storage ?? [];
+    console.log(`forge storage-layout (${contractName}, ${rows.length} slots):`);
+    for (const row of rows.slice(0, 12)) {
+      console.log(`  slot ${row.slot}: ${row.label} (${row.type})`);
+    }
+    if (rows.length > 12) {
+      console.log(`  ... 另有 ${rows.length - 12} 个 slot`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`⚠ forge inspect 失败: ${message}`);
+  }
+}
 
 async function main() {
   console.log("🚀 开始升级 BridgeHub 合约...\n");
@@ -63,6 +96,28 @@ async function main() {
     // 合约已编译，直接获取
     const BridgeHubV2 = await ethers.getContractFactory("BridgeHub");
     console.log("✓ BridgeHub V2 已准备就绪\n");
+
+    // Step 2.5: Storage layout 校验
+    console.log("=== Step 2.5: Storage layout 校验 ===");
+    printForgeStorageLayout("BridgeHub");
+    try {
+      await upgrades.validateUpgrade(proxyAddress, BridgeHubV2, {
+        kind: "uups",
+      });
+      console.log("✓ @openzeppelin/upgrades-core: storage layout 兼容\n");
+    } catch (error) {
+      console.error("✗ Storage layout 不兼容，已中止升级");
+      if (error instanceof Error) {
+        console.error(error.message);
+      } else {
+        console.error(String(error));
+      }
+      throw new PermissionError(
+        "Storage layout 校验失败",
+        "新实现与链上代理的 storage layout 不兼容",
+        "请修复 layout 冲突后再升级，或部署新代理而非原地升级"
+      );
+    }
 
     // Step 3: 执行升级
     console.log("=== Step 3: 执行 UUPS 升级 ===");

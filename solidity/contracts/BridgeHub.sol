@@ -20,6 +20,7 @@ struct DepositConfirm {
     uint256 chainId;
     uint64 blockNumber;
     bytes32 txHash;
+    // EVM source: tx receipt logIndex; Solana source: instruction index in tx.
     uint32 index;
     Signature signature;
 }
@@ -104,6 +105,9 @@ contract BridgeHub is
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    // int8 keeps (srcDecimal - dstDecimal), which may be negative; uint8 cannot.
+    // Both decimals must be <= 77 so int8 casts and their difference stay in range.
+    uint8 private constant MAX_TOKEN_DECIMALS = 77;
 
     // Deposit: srcToken => dstToken (hub). Withdraw: dstToken => srcToken.
     mapping(uint256 => mapping(bytes32 => bytes32)) public tokenPair;
@@ -266,8 +270,20 @@ contract BridgeHub is
         require(chainId != 0, "Invalid chainId");
         require(srcToken != bytes32(0), "Invalid src token");
         require(dstToken != address(0), "Invalid dst token");
+        require(
+            tokenPair[chainId][srcToken] == bytes32(0),
+            "Token pair already set"
+        );
+        require(
+            srcTokenDecimal <= MAX_TOKEN_DECIMALS,
+            "Invalid src decimals"
+        );
 
         uint8 dstTokenDecimal = IERC20Metadata(dstToken).decimals();
+        require(
+            dstTokenDecimal <= MAX_TOKEN_DECIMALS,
+            "Invalid dst decimals"
+        );
         int8 decimalDiff = int8(srcTokenDecimal) - int8(dstTokenDecimal);
         bytes32 dstTokenBytes32 = _addressToBytes32(dstToken);
 
@@ -581,6 +597,7 @@ contract BridgeHub is
         return (info.totalPower, signers, signatures, info.rawData);
     }
 
+    /// @param index EVM source: tx receipt logIndex; Solana source: instruction index.
     function makeDepositMessage(
         bytes32 user,
         address destination,
@@ -680,10 +697,6 @@ contract BridgeHub is
             return true;
         }
         return false;
-    }
-
-    function _checkTokenPair(bytes32 token) private pure {
-        require(token != bytes32(0), "Token not found");
     }
 
     function _addressToBytes32(address token) private pure returns (bytes32) {
@@ -812,7 +825,7 @@ contract BridgeHub is
 
         bytes32 bridgedTokenBytes32 = _addressToBytes32(token);
         bytes32 srcTokenBytes32 = tokenPair[chainId][bridgedTokenBytes32];
-        _checkTokenPair(srcTokenBytes32);
+        require(srcTokenBytes32 != bytes32(0), "Token not found");
         address bridgeToken = _bytes32ToAddress(srcTokenBytes32);
 
         // Transfer tokens from user to contract
@@ -872,7 +885,11 @@ contract BridgeHub is
 
         // Resolve bridged token to mint by (srcChainId, srcToken)
         bytes32 bridgedTokenBytes32 = tokenPair[data.chainId][data.token];
-        _checkTokenPair(bridgedTokenBytes32);
+        require(
+            bridgedTokenBytes32 != bytes32(0) &&
+                _isEvmTokenAddress(bridgedTokenBytes32),
+            "Invalid bridged token"
+        );
         address bridgedToken = _bytes32ToAddress(bridgedTokenBytes32);
 
         // Build message for signature recovery

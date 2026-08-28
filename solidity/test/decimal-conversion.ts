@@ -115,6 +115,30 @@ describe("BridgeHub Decimal Conversion", function () {
     ).to.equal(-12n);
   });
 
+  it("rejects setTokenPair when the src token pair already exists", async function () {
+    await pairTokens(6);
+
+    await expect(
+      bridgeHub.setTokenPair(
+        SRC_CHAIN_ID,
+        addressToBytes32(await srcToken.getAddress()),
+        6,
+        await bridgedToken.getAddress()
+      )
+    ).to.be.revertedWith("Token pair already set");
+  });
+
+  it("rejects setTokenPair when src decimals exceed int8-safe range", async function () {
+    await expect(
+      bridgeHub.setTokenPair(
+        SRC_CHAIN_ID,
+        addressToBytes32(await srcToken.getAddress()),
+        78,
+        await bridgedToken.getAddress()
+      )
+    ).to.be.revertedWith("Invalid src decimals");
+  });
+
   it("stores 12 on dst pair for withdraw decimal conversion", async function () {
     const src = await srcToken.getAddress();
     const bridged = await bridgedToken.getAddress();

@@ -1,0 +1,17 @@
+[profile.default]
+src = "contracts"
+test = "forge-test"
+out = "forge-out"
+cache_path = "forge-cache"
+libs = ["node_modules"]
+solc = "0.8.22"
+optimizer = true
+optimizer_runs = 200
+evm_version = "paris"
+remappings = [
+  "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+  "@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/",
+]
+
+# Hardhat copies proxy artifacts here; not part of Foundry builds.
+skip = ["contracts/hardhat-dependency-compiler"]
