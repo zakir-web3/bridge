@@ -40,6 +40,10 @@ Bridge 通过一对合约连接两条 EVM 链：
 - **可靠扫描** — 区块进度持久化到 BadgerDB，支持可配置的确认深度和重试逻辑
 - **灵活 Gas 控制** — 支持 fee history、gas 上限，以及 dry-run（`no_send`）模式
 
+## 开发路线图
+
+- **Solana 跨链** — 支持 Solana 与 EVM 链之间的跨链桥接
+
 ## 环境要求
 
 | 工具 | 版本 |

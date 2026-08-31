@@ -40,6 +40,10 @@ The relayer runs block scanners on both sides, collects validator signatures, an
 - **Resilient scanning** — block progress is persisted in BadgerDB with configurable confirmation depth and retry logic
 - **Flexible gas control** — fee history, gas caps, and a dry-run (`no_send`) mode for testing
 
+## Roadmap
+
+- **Solana cross-chain** — bridging between Solana and EVM chains
+
 ## Prerequisites
 
 | Tool | Version |
