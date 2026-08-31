@@ -6,7 +6,8 @@
     "test": "anchor test",
     "initialize": "ts-node scripts/initialize.ts",
     "initialize-vault": "ts-node scripts/initialize-vault.ts",
-    "deposit": "ts-node scripts/deposit.ts"
+    "deposit": "ts-node scripts/deposit.ts",
+    "setup-e2e": "ts-node scripts/setup-e2e.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.1.2",

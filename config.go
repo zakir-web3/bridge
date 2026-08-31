@@ -14,15 +14,17 @@ import (
 	"github.com/zakir-web3/bridge/internal/bridge"
 	"github.com/zakir-web3/bridge/internal/bridgehub"
 	"github.com/zakir-web3/bridge/internal/evm"
+	"github.com/zakir-web3/bridge/internal/solana"
 )
 
 type Config struct {
-	LogLevel  string            `mapstructure:"log_level"  toml:"log_level"`
-	LogFormat string            `mapstructure:"log_format" toml:"log_format"`
-	Source    string            `mapstructure:"source"     toml:"source"`
-	PrivKey   *ecdsa.PrivateKey `mapstructure:"priv_key"   toml:"priv_key"`
-	Bridge    bridge.Config     `mapstructure:"bridge"     toml:"bridge"`
-	BridgeHub bridgehub.Config  `mapstructure:"bridge_hub" toml:"bridge_hub"`
+	LogLevel  string            `mapstructure:"log_level"     toml:"log_level"`
+	LogFormat string            `mapstructure:"log_format"    toml:"log_format"`
+	Source    string            `mapstructure:"source"        toml:"source"`
+	PrivKey   *ecdsa.PrivateKey `mapstructure:"priv_key"      toml:"priv_key"`
+	Bridge    bridge.Config     `mapstructure:"bridge"        toml:"bridge"`
+	BridgeHub bridgehub.Config  `mapstructure:"bridge_hub"    toml:"bridge_hub"`
+	Solana    solana.Config     `mapstructure:"solana"        toml:"solana"`
 }
 
 func (c *Config) String() string {
@@ -50,11 +52,24 @@ func (c *Config) Validate() error {
 	if c.Source == "" {
 		return errors.New("source is required")
 	}
-	if err := c.Bridge.Validate(); err != nil {
-		return errors.Wrap(err, "bridge")
+	if !c.BridgeHub.Enabled() {
+		return errors.New("bridge_hub is required")
+	}
+	if !c.Bridge.Enabled() && !c.Solana.Enabled() {
+		return errors.New("either bridge or solana must be configured")
 	}
 	if err := c.BridgeHub.Validate(); err != nil {
 		return errors.Wrap(err, "bridge_hub")
+	}
+	if c.Bridge.Enabled() {
+		if err := c.Bridge.Validate(); err != nil {
+			return errors.Wrap(err, "bridge")
+		}
+	}
+	if c.Solana.Enabled() {
+		if err := (&c.Solana).Validate(); err != nil {
+			return errors.Wrap(err, "solana")
+		}
 	}
 	return nil
 }

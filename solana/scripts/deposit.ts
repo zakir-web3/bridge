@@ -114,6 +114,35 @@ async function main() {
     .accounts({ mint })
     .rpc();
 
+  const latestBlockhash = await provider.connection.getLatestBlockhash();
+  // Local validators may return from rpc() before getTransaction can see the tx.
+  await provider.connection.confirmTransaction(
+    {
+      signature: sig,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  const tx = await provider.connection.getTransaction(sig, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 0,
+  });
+  if (!tx?.meta?.logMessages) {
+    throw new Error("transaction logs missing");
+  }
+
+  let eventB64 = "";
+  for (const line of tx.meta.logMessages) {
+    if (line.startsWith("Program data: ")) {
+      eventB64 = line.slice("Program data: ".length);
+    }
+  }
+  if (!eventB64) {
+    throw new Error("deposit event not found in transaction logs");
+  }
+
   const vaultBalance = await provider.connection.getTokenAccountBalance(
     vaultTokenAccount
   );
@@ -129,6 +158,7 @@ async function main() {
   );
   console.log("  vault_token_account:", vaultTokenAccount.toBase58());
   console.log("  vault_balance:", vaultBalance.value.amount);
+  console.log("  deposit_event_b64:", eventB64);
 }
 
 main().catch((err) => {

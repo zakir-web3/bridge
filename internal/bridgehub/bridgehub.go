@@ -88,6 +88,38 @@ func (b *BridgeHub) SetBridgeContract(bc BridgeContract) {
 	b.bc = bc
 }
 
+func (b *BridgeHub) DepositConfirmSolana(ctx context.Context, srcChainID *big.Int, deposits ...*contract.SolanaDeposit) error {
+	depositConfirms := make([]contract.DepositConfirm, 0, len(deposits))
+	for _, d := range deposits {
+		typedData := d.ToTypedData(srcChainID, b.GetChainID(), b.cfg.BridgeHubAddress)
+		processed, err := b.hasSignature(ctx, typedData)
+		if err != nil {
+			return err
+		}
+		if processed {
+			continue
+		}
+		signature, err := b.SignTypedData(typedData)
+		if err != nil {
+			return err
+		}
+		depositConfirms = append(depositConfirms, d.ToDepositConfirm(signature))
+	}
+	if len(depositConfirms) == 0 {
+		return nil
+	}
+	transaction, err := b.contract.DepositConfirm(b.NewTransactOpts(ctx), depositConfirms)
+	if err != nil {
+		return errors.Wrap(err, "create deposit confirm transaction")
+	}
+	b.logger.Info().
+		Str("txHash", transaction.Hash().Hex()).
+		Uint64("nonce", transaction.Nonce()).
+		Msg("Solana deposit confirm transaction sent")
+	_, err = b.WaitForTransactionReceipt(ctx, transaction)
+	return err
+}
+
 func (b *BridgeHub) DepositConfirm(ctx context.Context, chainId *big.Int, transfer ...*contract.BridgeERC20Transfer) error {
 	depositConfirms := make([]contract.DepositConfirm, 0, len(transfer))
 	for _, t := range transfer {

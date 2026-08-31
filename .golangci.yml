@@ -58,9 +58,11 @@ formatters:
       # Module path which contains the source code being formatted.
       # Default: ""
       module-path: github.com/zakir-web3/bridge
-      # Choose whether to use the extra rules.
-      # Default: false
-      extra-rules: true
+      # Extra formatting rules (replaces deprecated extra-rules).
+      extra:
+        group-params: true
+        clothe-returns: true
+        balance-calls: true
     goimports:
       # A list of prefixes, which, if set, checks import paths
       # with the given prefixes are grouped after 3rd-party packages.

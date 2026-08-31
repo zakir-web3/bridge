@@ -16,6 +16,9 @@ type Config struct {
 }
 
 func (c Config) Validate() error {
+	if !c.Enabled() {
+		return nil
+	}
 	if err := c.Config.Validate(); err != nil {
 		return err
 	}
@@ -26,4 +29,8 @@ func (c Config) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func (c Config) Enabled() bool {
+	return c.BridgeHubAddress != (common.Address{})
 }

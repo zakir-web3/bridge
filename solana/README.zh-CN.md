@@ -120,7 +120,7 @@ npm run deposit -- <MINT_PUBKEY> <AMOUNT> <EVM_DESTINATION>
 
 ## Relayer 配置
 
-在 `config.toml` 中配置 `[solana_bridge]`（模板见 `.config.toml`）：
+在 `config.toml` 中配置 `[solana]`（模板见 `.config.toml`）：
 
 - `chain_id` — 如 devnet 用 `900001`（须与 EVM `setTokenPair` 一致）
 - `program_id` — 部署后的程序 ID

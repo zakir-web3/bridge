@@ -22,4 +22,11 @@ format:
 	golangci-lint fmt -v ./...
 
 e2e:
-	bash scripts/e2e.sh
+	make evm-e2e
+	make solana-e2e
+
+evm-e2e:
+	bash scripts/evm-e2e.sh
+
+solana-e2e:
+	bash scripts/solana-e2e.sh

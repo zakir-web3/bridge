@@ -120,7 +120,7 @@ The script uses `ANCHOR_WALLET` as the depositor and creates the user ATA if nee
 
 ## Relayer integration
 
-Configure `[solana_bridge]` in `config.toml` (see `.config.toml` template):
+Configure `[solana]` in `config.toml` (see `.config.toml` template):
 
 - `chain_id` — e.g. `900001` for devnet (must match EVM `setTokenPair`)
 - `program_id` — deployed program ID

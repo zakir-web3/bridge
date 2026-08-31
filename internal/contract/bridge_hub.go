@@ -22,15 +22,15 @@ func NewBridgeHubDomain(chainId *big.Int, verifyingContract common.Address) apit
 }
 
 func (v *BridgeHubRequestedValidatorSetUpdate) ToTypedData(_, chainId *big.Int, verifyingContract common.Address) apitypes.TypedData {
-	hot := make([]interface{}, len(v.HotAddresses))
+	hot := make([]any, len(v.HotAddresses))
 	for i, addr := range v.HotAddresses {
 		hot[i] = addr.Hex()
 	}
-	cold := make([]interface{}, len(v.ColdAddresses))
+	cold := make([]any, len(v.ColdAddresses))
 	for i, addr := range v.ColdAddresses {
 		cold[i] = addr.Hex()
 	}
-	powers := make([]interface{}, len(v.Powers))
+	powers := make([]any, len(v.Powers))
 	for i, power := range v.Powers {
 		powers[i] = strconv.FormatUint(power, 10)
 	}

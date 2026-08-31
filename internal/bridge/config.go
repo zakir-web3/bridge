@@ -24,6 +24,9 @@ type Config struct {
 }
 
 func (c Config) Validate() error {
+	if !c.Enabled() {
+		return nil
+	}
 	if err := c.Config.Validate(); err != nil {
 		return err
 	}
@@ -50,6 +53,10 @@ func (c Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (c Config) Enabled() bool {
+	return c.BridgeAddress != (common.Address{})
 }
 
 func (c Config) IsBridgeToken(token common.Address) bool {

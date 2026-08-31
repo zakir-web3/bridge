@@ -55,7 +55,7 @@ gas_tip_cap="1000000000"
 # Gas费用上限：交易的最小总gas价格
 gas_fee_cap="1000000000"
 
-# 桥接节点配置
+# 桥接节点配置（EVM 源链；仅 Solana→EVM 时可留空 bridge_address）
 [bridge]
 # BSC节点RPC地址：用于连接BSC网络
 node_url = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
@@ -79,12 +79,10 @@ block_interval = 100
 block_delay = 12
 # 是否清除缓存：设置为true时会清除本地缓存的区块高度，从start_block重新开始扫描
 clear_cache = false
-# 桥接合约地址：部署的Bridge合约地址
-bridge_address = "0x1234567890123456789012345678901234567890"
-# 需要监控的ERC20代币地址列表：支持跨链的代币合约地址
-bridge_tokens = [
-    "0x1234567890123456789012345678901234567890",  # USDT
-]
+# 桥接合约地址：留空则禁用 EVM 源链 scanner
+bridge_address = ""
+# 需要监控的ERC20代币地址列表（EVM 源链；Solana-only 可留空）
+bridge_tokens = []
 # 费用历史区块数量：用于计算gas费用的历史区块数量
 fee_history_block_count = 10
 # 费用历史奖励百分位数：用于计算gas费用的百分位数
@@ -113,3 +111,25 @@ max_withdraw_amount = "100000000000000000000" # 100
 request_withdraw_gas_limit = 0
 # 是否启用提取请求：设置为true时启用提取请求功能
 enable_request_withdraw = true
+
+# Solana 源链桥接配置（Solana → EVM deposit）
+[solana]
+# Solana RPC 地址
+node_url = "https://api.devnet.solana.com"
+# Solana 链 ID（写入 EIP-712 Deposit.chainId，devnet 示例 900001）
+chain_id = "900001"
+# Anchor bridge 程序 ID
+program_id = "C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq"
+# 监控的 SPL mint 白名单
+bridge_mints = [
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+]
+max_retries = 5
+base_delay = "100ms"
+max_delay = "5s"
+backoff_rate = 2.0
+interval = "3s"
+start_slot = 0
+slot_interval = 1000
+slot_delay = 32
+clear_cache = false

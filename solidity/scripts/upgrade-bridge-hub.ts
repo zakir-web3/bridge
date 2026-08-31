@@ -27,7 +27,9 @@ function printForgeStorageLayout(contractName: string) {
       storage?: Array<{ label: string; slot: string; type: string }>;
     };
     const rows = layout.storage ?? [];
-    console.log(`forge storage-layout (${contractName}, ${rows.length} slots):`);
+    console.log(
+      `forge storage-layout (${contractName}, ${rows.length} slots):`
+    );
     for (const row of rows.slice(0, 12)) {
       console.log(`  slot ${row.slot}: ${row.label} (${row.type})`);
     }

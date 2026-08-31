@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
-# Dual local Hardhat e2e: deploy Bridge + BridgeHub, run the relayer, then
-# deposit on the source chain and withdraw back through BridgeHub.
+# EVM ↔ EVM end-to-end test (local Hardhat only).
+#
+# Flow:
+#   1. Start two Hardhat nodes (source + hub)
+#   2. Deploy Bridge, BridgeHub, token pair, and start the Go relayer
+#   3. User deposits on source → relayer mints on hub
+#   4. User withdraws on hub → relayer finalizes unlock on source
+#
+# Usage: ./scripts/evm-e2e.sh
+# Override ports/keys via env vars (see below). Requires: node, npm, make, curl.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/e2e-common.sh
+source "$ROOT/scripts/e2e-common.sh"
 SOLIDITY="$ROOT/solidity"
-WORK="$ROOT/tmp/e2e"
+WORK="$ROOT/tmp/evm-e2e"
 
+# --- Config (all overridable via env) ---
 SOURCE_PORT="${SOURCE_PORT:-8545}"
 HUB_PORT="${HUB_PORT:-8546}"
 SOURCE_CHAIN_ID="${SOURCE_CHAIN_ID:-31337}"
@@ -25,10 +36,12 @@ COLD_VALIDATOR="${COLD_VALIDATOR:-0x70997970C51812dc3A010C7d01b50e0d17dc79C8}"
 # Hardhat account #2 is the depositor/withdrawer so it does not share nonces with the relayer.
 USER_PRIVATE_KEY="${USER_PRIVATE_KEY:-0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a}"
 
+# Short dispute window so finalize-withdraw completes quickly in CI.
 DISPUTE_PERIOD_SECONDS="${DISPUTE_PERIOD_SECONDS:-2}"
 BLOCK_DURATION_MILLIS="${BLOCK_DURATION_MILLIS:-750}"
-AMOUNT="${AMOUNT:-1000000000000000000}"
+AMOUNT="${AMOUNT:-1000000000000000000}" # 1 token with 18 decimals
 
+# --- Workspace & cleanup ---
 mkdir -p "$WORK"
 rm -rf "$WORK"/*
 : >"$WORK/source.log"
@@ -41,18 +54,11 @@ RELAYER_PID=""
 
 cleanup() {
   local code=$?
-  if [[ -n "${RELAYER_PID}" ]] && kill -0 "$RELAYER_PID" 2>/dev/null; then
-    kill "$RELAYER_PID" 2>/dev/null || true
-    wait "$RELAYER_PID" 2>/dev/null || true
-  fi
-  if [[ -n "${HUB_PID}" ]] && kill -0 "$HUB_PID" 2>/dev/null; then
-    kill "$HUB_PID" 2>/dev/null || true
-    wait "$HUB_PID" 2>/dev/null || true
-  fi
-  if [[ -n "${SOURCE_PID}" ]] && kill -0 "$SOURCE_PID" 2>/dev/null; then
-    kill "$SOURCE_PID" 2>/dev/null || true
-    wait "$SOURCE_PID" 2>/dev/null || true
-  fi
+  e2e_stop_pid "$RELAYER_PID"
+  e2e_stop_pid "$HUB_PID"
+  e2e_stop_pid "$SOURCE_PID"
+  e2e_free_port "$SOURCE_PORT"
+  e2e_free_port "$HUB_PORT"
   if [[ $code -ne 0 ]]; then
     echo "---- source hardhat (keys stripped) ----"
     grep -vi "private key" "$WORK/source.log" | tail -n 40 || true
@@ -64,13 +70,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# --- Helpers ---
 port_in_use() {
-  local port="$1"
-  if command -v lsof >/dev/null 2>&1; then
-    lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
-  else
-    (echo >/dev/tcp/127.0.0.1/"$port") >/dev/null 2>&1
-  fi
+  e2e_port_in_use "$1"
 }
 
 wait_for_rpc() {
@@ -147,7 +149,7 @@ wait_for_balance() {
   start="$(date +%s)"
   while true; do
     bal="$(token_balance "$rpc" "$token" "$account")"
-    echo "[e2e] ${label}: balance=${bal} expected=${expected}"
+    echo "[evm-e2e] ${label}: balance=${bal} expected=${expected}"
     if [[ "$bal" == "$expected" ]]; then
       return 0
     fi
@@ -160,6 +162,7 @@ wait_for_balance() {
   done
 }
 
+# --- Preflight ---
 if port_in_use "$SOURCE_PORT"; then
   echo "port $SOURCE_PORT is already in use" >&2
   exit 1
@@ -182,11 +185,12 @@ echo "==> user ${USER_ADDRESS}"
 echo "==> build relayer"
 make -C "$ROOT" build
 
+# --- Local chains ---
 echo "==> start source Hardhat (chain $SOURCE_CHAIN_ID port $SOURCE_PORT)"
 (
   cd "$SOLIDITY"
   HARDHAT_CHAIN_ID="$SOURCE_CHAIN_ID" HARDHAT_MINE_INTERVAL="$MINE_INTERVAL" \
-    npx hardhat node --hostname 127.0.0.1 --port "$SOURCE_PORT"
+    exec npx hardhat node --hostname 127.0.0.1 --port "$SOURCE_PORT"
 ) >"$WORK/source.log" 2>&1 &
 SOURCE_PID=$!
 wait_for_rpc "$SOURCE_RPC" "$(to_chain_hex "$SOURCE_CHAIN_ID")"
@@ -195,12 +199,13 @@ echo "==> start hub Hardhat (chain $HUB_CHAIN_ID port $HUB_PORT)"
 (
   cd "$SOLIDITY"
   HARDHAT_CHAIN_ID="$HUB_CHAIN_ID" HARDHAT_MINE_INTERVAL="$MINE_INTERVAL" \
-    npx hardhat node --hostname 127.0.0.1 --port "$HUB_PORT"
+    exec npx hardhat node --hostname 127.0.0.1 --port "$HUB_PORT"
 ) >"$WORK/hub.log" 2>&1 &
 HUB_PID=$!
 wait_for_rpc "$HUB_RPC" "$(to_chain_hex "$HUB_CHAIN_ID")"
 echo "==> both nodes ready"
 
+# Validator set passed to deploy.sh for BridgeHub initialization.
 export PRIVATE_KEY
 export HOT_ADDRESSES="$VALIDATOR"
 export COLD_ADDRESSES="$COLD_VALIDATOR"
@@ -222,6 +227,7 @@ deploy() {
   ) | tee "$out"
 }
 
+# --- Contract deployment ---
 echo "==> deploy source token"
 (
   cd "$SOLIDITY"
@@ -249,6 +255,7 @@ echo "==> deploy BridgeHub"
 deploy "$HUB_RPC" "$HUB_CHAIN_ID" bridgeHub "$WORK/bridgehub.log"
 BRIDGE_HUB_ADDRESS="$(extract_address "$WORK/bridgehub.log")"
 
+# Maps source-chain ERC-20 → hub bridged ERC-20 in BridgeHub.
 echo "==> register token pair"
 (
   cd "$SOLIDITY"
@@ -261,6 +268,7 @@ echo "==> register token pair"
     bash ./deploy.sh bridgeToken
 ) | tee "$WORK/pair.log"
 
+# Relayer scans source Bridge + hub BridgeHub; finalize path needs both flags.
 echo "==> write relayer config"
 cat >"$WORK/config.toml" <<EOF
 log_level = "info"
@@ -348,6 +356,7 @@ if [[ "$ready" -ne 1 ]]; then
 fi
 echo "==> relayer ready"
 
+# --- Cross-chain round trip ---
 echo "==> deposit"
 (
   cd "$SOLIDITY"
@@ -360,8 +369,10 @@ echo "==> deposit"
     AMOUNT="$AMOUNT" \
     npx hardhat run scripts/deposit.ts --network custom
 )
+# Relayer should observe the deposit event and mint bridged tokens on hub.
 wait_for_balance "dest mint after deposit" "$HUB_RPC" "$DEST_TOKEN" "$USER_ADDRESS" "$AMOUNT" 90
 
+# Tokens leave the user wallet and sit in Bridge on source.
 source_locked="$(token_balance "$SOURCE_RPC" "$SOURCE_TOKEN" "$USER_ADDRESS")"
 if [[ "$source_locked" != "0" ]]; then
   echo "source token should be locked in Bridge, got ${source_locked}" >&2
@@ -381,10 +392,11 @@ echo "==> withdraw"
     AMOUNT="$AMOUNT" \
     npx hardhat run scripts/withdraw.ts --network custom
 )
+# Hub burns bridged tokens; relayer submits finalize after dispute period.
 wait_for_balance "dest burn after withdraw" "$HUB_RPC" "$DEST_TOKEN" "$USER_ADDRESS" "0" 90
 wait_for_balance "source unlock after finalize" "$SOURCE_RPC" "$SOURCE_TOKEN" "$USER_ADDRESS" "$AMOUNT" 120
 
-echo "==> e2e passed"
+echo "==> evm e2e passed"
 echo "Bridge=${BRIDGE_ADDRESS}"
 echo "BridgeHub=${BRIDGE_HUB_ADDRESS}"
 echo "SourceToken=${SOURCE_TOKEN}"
