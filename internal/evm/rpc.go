@@ -47,7 +47,7 @@ func (c *RetryConfig) Validate() error {
 
 func NewClient(ctx context.Context, url string, config *RetryConfig) (*ethclient.Client, error) {
 	httpClient := &http.Client{
-		Transport: newRetryTransport(http.DefaultTransport, config),
+		Transport: NewRetryTransport(http.DefaultTransport, config),
 		Timeout:   5 * time.Second,
 	}
 
@@ -65,8 +65,8 @@ type RetryTransport struct {
 	config *RetryConfig
 }
 
-// newRetryTransport creates a transport wrapper with retry functionality
-func newRetryTransport(tripper http.RoundTripper, config *RetryConfig) *RetryTransport {
+// NewRetryTransport creates a transport wrapper with retry functionality.
+func NewRetryTransport(tripper http.RoundTripper, config *RetryConfig) *RetryTransport {
 	if config == nil {
 		config = DefaultRetryConfig()
 	}

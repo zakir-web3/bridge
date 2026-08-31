@@ -2,11 +2,15 @@ package solana
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/gagliardetto/solana-go/rpc/jsonrpc"
 	"github.com/pkg/errors"
+
+	"github.com/zakir-web3/bridge/internal/evm"
 )
 
 const defaultRPCTimeout = 30 * time.Second
@@ -19,11 +23,17 @@ type Client struct {
 	rpc *rpc.Client
 }
 
-func NewClient(nodeURL string) (*Client, error) {
+func NewClient(nodeURL string, config *evm.RetryConfig) (*Client, error) {
 	if nodeURL == "" {
 		return nil, errors.New("node_url is required")
 	}
-	return &Client{rpc: rpc.New(nodeURL)}, nil
+	httpClient := &http.Client{
+		Transport: evm.NewRetryTransport(http.DefaultTransport, config),
+		Timeout:   defaultRPCTimeout,
+	}
+	opts := &jsonrpc.RPCClientOpts{HTTPClient: httpClient}
+	rpcClient := jsonrpc.NewClientWithOpts(nodeURL, opts)
+	return &Client{rpc: rpc.NewWithCustomRPCClient(rpcClient)}, nil
 }
 
 func (c *Client) GetSlot(ctx context.Context) (uint64, error) {

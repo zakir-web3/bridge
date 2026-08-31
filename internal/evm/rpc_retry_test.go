@@ -35,7 +35,7 @@ func TestRetryTransport_RetryableStatusReturnsError(t *testing.T) {
 	t.Parallel()
 
 	var closeCount int32
-	rt := newRetryTransport(&sequenceRoundTripper{
+	rt := NewRetryTransport(&sequenceRoundTripper{
 		fn: func(_ int) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: 503,
@@ -64,7 +64,7 @@ func TestRetryTransport_RetryableStatusReturnsError(t *testing.T) {
 func TestRetryTransport_ErrorWithoutResponseReturnsWrappedError(t *testing.T) {
 	t.Parallel()
 
-	rt := newRetryTransport(&sequenceRoundTripper{
+	rt := NewRetryTransport(&sequenceRoundTripper{
 		fn: func(_ int) (*http.Response, error) {
 			return nil, errors.New("dial failed")
 		},
