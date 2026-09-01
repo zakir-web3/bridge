@@ -2,11 +2,21 @@ package solana
 
 import (
 	"math/big"
+	"strings"
+	"time"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/pkg/errors"
 
 	"github.com/zakir-web3/bridge/internal/evm"
+)
+
+const (
+	defaultSignaturesPageLimit = 1000
+	defaultTxFetchRetries      = 5
+	defaultRescanSlots         = 128
+	defaultSlotLookback        = 64
 )
 
 type Config struct {
@@ -18,6 +28,7 @@ type Config struct {
 	ProgramIDStr      string `mapstructure:"program_id"      toml:"program_id"`
 	BridgeMints       []solana.PublicKey
 	BridgeMintsStr    []string `mapstructure:"bridge_mints"    toml:"bridge_mints"`
+	Commitment        string   `mapstructure:"commitment"      toml:"commitment"`
 }
 
 func (c *Config) DecodePubkeys() error {
@@ -41,6 +52,19 @@ func (c *Config) DecodePubkeys() error {
 
 func (c Config) Enabled() bool {
 	return c.ProgramIDStr != ""
+}
+
+func (c Config) CommitmentType() rpc.CommitmentType {
+	switch strings.ToLower(strings.TrimSpace(c.Commitment)) {
+	case "", "finalized":
+		return rpc.CommitmentFinalized
+	case "confirmed":
+		return rpc.CommitmentConfirmed
+	case "processed":
+		return rpc.CommitmentProcessed
+	default:
+		return rpc.CommitmentFinalized
+	}
 }
 
 func (c *Config) Validate() error {
@@ -75,4 +99,42 @@ func (c Config) IsBridgeMint(mint solana.PublicKey) bool {
 		}
 	}
 	return false
+}
+
+// SlotScannerConfig drives slot-based polling.
+type SlotScannerConfig struct {
+	Interval            time.Duration `mapstructure:"interval"                toml:"interval"`
+	StartSlot           uint64        `mapstructure:"start_slot"                toml:"start_slot"`
+	SlotInterval        uint64        `mapstructure:"slot_interval"             toml:"slot_interval"`
+	SlotDelay           uint64        `mapstructure:"slot_delay"                toml:"slot_delay"`
+	SlotLookback        uint64        `mapstructure:"slot_lookback"             toml:"slot_lookback"`
+	RescanSlots         uint64        `mapstructure:"rescan_slots"              toml:"rescan_slots"`
+	SignaturesPageLimit int           `mapstructure:"signatures_page_limit"     toml:"signatures_page_limit"`
+	TxFetchRetries      int           `mapstructure:"tx_fetch_retries"          toml:"tx_fetch_retries"`
+	ClearCache          bool          `mapstructure:"clear_cache"               toml:"clear_cache"`
+}
+
+func (c *SlotScannerConfig) applyDefaults() {
+	if c.SlotLookback == 0 {
+		c.SlotLookback = defaultSlotLookback
+	}
+	if c.RescanSlots == 0 {
+		c.RescanSlots = defaultRescanSlots
+	}
+	if c.SignaturesPageLimit == 0 {
+		c.SignaturesPageLimit = defaultSignaturesPageLimit
+	}
+	if c.TxFetchRetries == 0 {
+		c.TxFetchRetries = defaultTxFetchRetries
+	}
+}
+
+func (c SlotScannerConfig) Validate() error {
+	if c.Interval == 0 {
+		return errors.New("interval is required")
+	}
+	if c.SlotInterval == 0 {
+		return errors.New("slot_interval is required")
+	}
+	return nil
 }

@@ -21,7 +21,7 @@ type Bridge struct {
 }
 
 func NewBridge(ctx context.Context, cfg Config, hub *bridgehub.BridgeHub) (*Bridge, error) {
-	client, err := NewClient(cfg.NodeURL, &cfg.RetryConfig)
+	client, err := NewClient(cfg.NodeURL, cfg.CommitmentType(), &cfg.RetryConfig, nil)
 	if err != nil {
 		return nil, err
 	}
