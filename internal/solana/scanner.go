@@ -132,19 +132,19 @@ func (s *Scanner) fetchSignatures(ctx context.Context, startSlot, endSlot uint64
 		MinContextSlot: &fetchStartSlot,
 		Commitment:     defaultCommitment,
 	}
-	sigs, err := s.client.GetSignaturesForAddress(ctx, s.programID, opts)
+	txSigs, err := s.client.GetSignaturesForAddress(ctx, s.programID, opts)
 	if err != nil {
-		return errors.Wrap(err, "get signatures for program")
+		return errors.Wrap(err, "get transaction signatures for program")
 	}
-	for _, entry := range sigs {
-		if entry.Err != nil {
+	for _, txSig := range txSigs {
+		if txSig.Err != nil {
 			continue
 		}
-		if entry.Slot < fetchStartSlot || entry.Slot > endSlot {
+		if txSig.Slot < fetchStartSlot || txSig.Slot > endSlot {
 			continue
 		}
-		if err := s.processor.ProcessSignature(ctx, entry.Signature); err != nil {
-			s.logger.Error().Err(err).Str("signature", entry.Signature.String()).Msg("process signature failed")
+		if err := s.processor.ProcessSignature(ctx, txSig.Signature); err != nil {
+			s.logger.Error().Err(err).Str("signature", txSig.Signature.String()).Msg("process transaction signature failed")
 			return err
 		}
 	}

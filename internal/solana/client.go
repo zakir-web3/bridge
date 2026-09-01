@@ -50,7 +50,7 @@ func (c *Client) GetTransaction(ctx context.Context, sig solana.Signature) (*rpc
 	ctx, cancel := context.WithTimeout(ctx, defaultRPCTimeout)
 	defer cancel()
 	version := uint64(0)
-	result, err := c.rpc.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
+	tx, err := c.rpc.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
 		Encoding:                       solana.EncodingBase64,
 		Commitment:                     defaultCommitment,
 		MaxSupportedTransactionVersion: &version,
@@ -58,7 +58,7 @@ func (c *Client) GetTransaction(ctx context.Context, sig solana.Signature) (*rpc
 	if err != nil {
 		return nil, errors.Wrap(err, "get transaction")
 	}
-	return result, nil
+	return tx, nil
 }
 
 func (c *Client) GetSignaturesForAddress(
@@ -68,9 +68,9 @@ func (c *Client) GetSignaturesForAddress(
 ) ([]*rpc.TransactionSignature, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultRPCTimeout)
 	defer cancel()
-	sigs, err := c.rpc.GetSignaturesForAddressWithOpts(ctx, address, opts)
+	txSigs, err := c.rpc.GetSignaturesForAddressWithOpts(ctx, address, opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "get signatures for address")
 	}
-	return sigs, nil
+	return txSigs, nil
 }
