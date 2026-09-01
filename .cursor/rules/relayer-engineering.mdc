@@ -1,0 +1,60 @@
+---
+description: Relayer 可观测性与 Go 工程约束。改 scanner/scheduler/cache/RPC 时遵守。
+globs: internal/{scanner,scheduler,cache,evm,solana,bridge,bridgehub}/**,server.go,main.go
+alwaysApply: false
+---
+
+# Relayer 工程规范
+
+## 原则
+
+- 先读并理解现有 `scanner` / `scheduler` / `cache` 实现，再动手改
+- 不要为了 metrics、抽象或「更 Go」而大范围重构
+- 不绕过现有 scanner / scheduler / cache 另写一套 indexer
+- 新能力优先补在现有抽象上；Solana scanner（`internal/solana/scanner.go`）是可观测性参考实现
+
+## 可观测性
+
+### 日志（zerolog）
+
+每次扫描周期至少输出可判断「停滞 / 缺口」的字段：
+
+| 链 | 必含字段 |
+|----|---------|
+| EVM | `chainID`, `currentBlock`, `startBlock`, `endBlock`, `backlogBlocks`（= end − start） |
+| Solana | `chainID`, `currentSlot`, `startSlot`, `endSlot`, `checkpointSlot`, `backlogSlots` |
+
+处理失败时带 `Err(err)` 及定位字段（`blockNumber` / `signature` / `slot`）。不记录 `priv_key`、RPC 密钥。
+
+周期结束可附 `metrics` snapshot（参考 Solana `ScannerMetrics.Snapshot()`）。
+
+### Metrics / 计数器
+
+改动扫描路径时，至少补 **结构化日志或计数器之一**。
+
+优先跟踪（Solana 已有 `ScannerMetrics`，EVM 待对齐）：
+
+- 同步进度：`head`（current block/slot）、`checkpoint`（cache 游标）
+- `backlog`（head − checkpoint − delay）
+- `scan_duration`、处理成功/失败/跳过数
+- `rpc_retries`、RPC 延迟（有 Prometheus 时做 histogram，否则日志 `Dur`）
+
+引入 Prometheus 时命名建议：`indexer_{head,checkpoint,backlog,scan_duration_seconds,events_processed_total,errors_total,rpc_retries_total}`，标签 `chain_id`、`stage`。
+
+## 代码质量
+
+| 项 | 约束 |
+|----|------|
+| Goroutine | 长期任务走 `server.SafeGo` + `scheduler.Run`；禁止散落裸 `go func()` |
+| Context | 向下传递；RPC 调用应有 timeout（参考 `solana/client.withTimeout`） |
+| Error | `errors.Wrap`；扫描中 `ProcessLog` / `ProcessTransaction` 失败保持现有 fail-fast 语义 |
+| Retry | 调度退避用 `scheduler`；HTTP 重试用 `evm.RetryTransport` |
+| 并发 | Badger 只通过 `View` / `Update`；不绕过 cache 直接写库 |
+| RPC client | 构造时创建、进程内复用；不每轮扫描新建 client |
+| Shutdown | 新增 `Open` 的资源必须有 `Close()`，在 `server.go` shutdown 路径调用（Badger 等待补齐） |
+| 配置 | 新字段进 `.config.toml` 模板 + 对应 `Validate()`；不硬编码 |
+
+## 禁止
+
+- 为可观测性引入与现有 zerolog / scheduler 并行的第二套日志或调度框架
+- 一次性大改 EVM + Solana + cache 仅为了「对齐风格」；按链逐步补齐缺口

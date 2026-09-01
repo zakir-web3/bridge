@@ -29,6 +29,7 @@ alwaysApply: true
 
 ## Relayer
 
+- 可观测性与 Go 工程约束见 `relayer-engineering.mdc`
 - 源链只处理 `bridge_tokens` 白名单
 - 发送 finalize 需要 `send_finalize_withdrawals = true` **且** `ENABLE_FINALIZE_WITHDRAWALS=true`
 - `start_block` 必须对齐合约部署高度；`no_send = true` 只模拟不广播
