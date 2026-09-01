@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/gagliardetto/solana-go"
-	"github.com/pkg/errors"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -53,12 +53,8 @@ func (b *Bridge) GetProgramID() solana.PublicKey {
 	return b.cfg.ProgramID
 }
 
-func (b *Bridge) ProcessSignature(ctx context.Context, sig solana.Signature) error {
-	result, err := b.client.GetTransaction(ctx, sig)
-	if err != nil {
-		return errors.Wrap(err, "get transaction")
-	}
-	parsed, err := ParseDepositFromTransaction(b.cfg.ProgramID, result, sig)
+func (b *Bridge) ProcessTransaction(ctx context.Context, sig solana.Signature, tx *rpc.GetTransactionResult) error {
+	parsed, err := ParseDepositFromTransaction(b.cfg.ProgramID, tx, sig)
 	if err != nil {
 		b.logger.Debug().
 			Err(err).

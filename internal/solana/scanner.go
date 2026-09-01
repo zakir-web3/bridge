@@ -31,12 +31,12 @@ type SlotScannerConfig struct {
 	ClearCache   bool
 }
 
-// SlotProcessor handles Solana program signatures.
+// SlotProcessor handles Solana program transactions.
 type SlotProcessor interface {
 	GetChainID() *big.Int
 	GetClient() *Client
 	GetProgramID() solana.PublicKey
-	ProcessSignature(ctx context.Context, sig solana.Signature) error
+	ProcessTransaction(ctx context.Context, sig solana.Signature, tx *rpc.GetTransactionResult) error
 }
 
 // Scanner polls Solana slots and processes program transactions.
@@ -143,8 +143,12 @@ func (s *Scanner) fetchSignatures(ctx context.Context, startSlot, endSlot uint64
 		if txSig.Slot < fetchStartSlot || txSig.Slot > endSlot {
 			continue
 		}
-		if err := s.processor.ProcessSignature(ctx, txSig.Signature); err != nil {
-			s.logger.Error().Err(err).Str("signature", txSig.Signature.String()).Msg("process transaction signature failed")
+		tx, err := s.client.GetTransaction(ctx, txSig.Signature)
+		if err != nil {
+			return errors.Wrap(err, "get transaction")
+		}
+		if err := s.processor.ProcessTransaction(ctx, txSig.Signature, tx); err != nil {
+			s.logger.Error().Err(err).Str("signature", txSig.Signature.String()).Msg("process transaction failed")
 			return err
 		}
 	}
