@@ -38,12 +38,6 @@ func Start(cfg *Config) error {
 		return err
 	}
 
-	bridgeInstance, err := bridge.NewBridge(ctx, cfg.Bridge, bridgeHubInstance)
-	if err != nil {
-		return err
-	}
-	bridgeHubInstance.SetBridgeContract(bridgeInstance)
-
 	var wg sync.WaitGroup
 
 	if cfg.Solana.Enabled() {
@@ -59,6 +53,12 @@ func Start(cfg *Config) error {
 	}
 
 	if cfg.Bridge.Enabled() {
+		bridgeInstance, err := bridge.NewBridge(ctx, cfg.Bridge, bridgeHubInstance)
+		if err != nil {
+			return err
+		}
+		bridgeHubInstance.SetBridgeContract(bridgeInstance)
+
 		bridgeScanner := scanner.NewScanner(cfg.Bridge.Config, badgerCache, bridgeInstance)
 		SafeGo("bridge-scanner", func() error {
 			log.Info().Str("bridge_interval", cfg.Bridge.Interval.String()).Msg("Bridge scanner configured")
