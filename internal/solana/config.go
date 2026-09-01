@@ -2,7 +2,6 @@ package solana
 
 import (
 	"math/big"
-	"time"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/pkg/errors"
@@ -11,18 +10,14 @@ import (
 )
 
 type Config struct {
-	NodeURL        string          `mapstructure:"node_url"        toml:"node_url"`
-	RetryConfig    evm.RetryConfig `mapstructure:",squash"        toml:",squash"`
-	Interval       time.Duration   `mapstructure:"interval"        toml:"interval"`
-	ChainID        *big.Int        `mapstructure:"chain_id"        toml:"chain_id"`
-	ProgramID      solana.PublicKey
-	ProgramIDStr   string `mapstructure:"program_id"      toml:"program_id"`
-	BridgeMints    []solana.PublicKey
-	BridgeMintsStr []string `mapstructure:"bridge_mints"    toml:"bridge_mints"`
-	StartSlot      uint64   `mapstructure:"start_slot"      toml:"start_slot"`
-	SlotInterval   uint64   `mapstructure:"slot_interval"   toml:"slot_interval"`
-	SlotDelay      uint64   `mapstructure:"slot_delay"      toml:"slot_delay"`
-	ClearCache     bool     `mapstructure:"clear_cache"     toml:"clear_cache"`
+	SlotScannerConfig `mapstructure:",squash"        toml:",squash"`
+	NodeURL           string          `mapstructure:"node_url"        toml:"node_url"`
+	RetryConfig       evm.RetryConfig `mapstructure:",squash"        toml:",squash"`
+	ChainID           *big.Int        `mapstructure:"chain_id"        toml:"chain_id"`
+	ProgramID         solana.PublicKey
+	ProgramIDStr      string `mapstructure:"program_id"      toml:"program_id"`
+	BridgeMints       []solana.PublicKey
+	BridgeMintsStr    []string `mapstructure:"bridge_mints"    toml:"bridge_mints"`
 }
 
 func (c *Config) DecodePubkeys() error {
@@ -58,8 +53,8 @@ func (c *Config) Validate() error {
 	if err := c.RetryConfig.Validate(); err != nil {
 		return errors.Wrap(err, "retry_config")
 	}
-	if c.Interval == 0 {
-		return errors.New("interval is required")
+	if err := c.SlotScannerConfig.Validate(); err != nil {
+		return err
 	}
 	if c.ChainID == nil || c.ChainID.Sign() <= 0 {
 		return errors.New("chain_id is required")
@@ -69,9 +64,6 @@ func (c *Config) Validate() error {
 	}
 	if len(c.BridgeMintsStr) == 0 {
 		return errors.New("bridge_mints is required")
-	}
-	if c.SlotInterval == 0 {
-		return errors.New("slot_interval is required")
 	}
 	return c.DecodePubkeys()
 }

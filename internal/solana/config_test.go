@@ -11,12 +11,14 @@ import (
 
 func TestConfigValidate_DecodesPubkeys(t *testing.T) {
 	cfg := &Config{
+		SlotScannerConfig: SlotScannerConfig{
+			Interval:     time.Second,
+			SlotInterval: 100,
+		},
 		NodeURL:        "http://127.0.0.1:8899",
-		Interval:       time.Second,
 		ChainID:        big.NewInt(900001),
 		ProgramIDStr:   "C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq",
 		BridgeMintsStr: []string{"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"},
-		SlotInterval:   100,
 	}
 
 	require.NoError(t, cfg.Validate())

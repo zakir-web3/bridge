@@ -27,15 +27,6 @@ func Start(cfg *Config) error {
 	defer cancelFunc()
 
 	log.Info().Str("version", Version).Msg("Starting bridge service...")
-	if cfg.Solana.Enabled() {
-		log.Info().Str("solana_interval", cfg.Solana.Interval.String()).Msg("Solana bridge scanner configured")
-	}
-	if cfg.BridgeHub.Enabled() {
-		log.Info().Str("bridgeHub_interval", cfg.BridgeHub.Interval.String()).Msg("BridgeHub scanner configured")
-	}
-	if cfg.Bridge.Enabled() {
-		log.Info().Str("bridge_interval", cfg.Bridge.Interval.String()).Msg("Bridge scanner configured")
-	}
 
 	badgerCache, err := cache.NewBadgerCache(cfg.Source)
 	if err != nil {
@@ -47,14 +38,11 @@ func Start(cfg *Config) error {
 		return err
 	}
 
-	var bridgeInstance *bridge.Bridge
-	if cfg.Bridge.Enabled() {
-		bridgeInstance, err = bridge.NewBridge(ctx, cfg.Bridge, bridgeHubInstance)
-		if err != nil {
-			return err
-		}
-		bridgeHubInstance.SetBridgeContract(bridgeInstance)
+	bridgeInstance, err := bridge.NewBridge(ctx, cfg.Bridge, bridgeHubInstance)
+	if err != nil {
+		return err
 	}
+	bridgeHubInstance.SetBridgeContract(bridgeInstance)
 
 	var wg sync.WaitGroup
 
@@ -63,14 +51,9 @@ func Start(cfg *Config) error {
 		if err != nil {
 			return err
 		}
-		solanaScanner := solana.NewScanner(solana.SlotScannerConfig{
-			Interval:     cfg.Solana.Interval,
-			StartSlot:    cfg.Solana.StartSlot,
-			SlotInterval: cfg.Solana.SlotInterval,
-			SlotDelay:    cfg.Solana.SlotDelay,
-			ClearCache:   cfg.Solana.ClearCache,
-		}, badgerCache, solanaBridgeInstance)
+		solanaScanner := solana.NewScanner(cfg.Solana.SlotScannerConfig, badgerCache, solanaBridgeInstance)
 		SafeGo("solana-scanner", func() error {
+			log.Info().Str("solana_interval", cfg.Solana.Interval.String()).Msg("Solana scanner configured")
 			return scheduler.Run(ctx, cfg.Solana.Interval, solanaScanner.ScanSlotRange)
 		}, errChan, &wg)
 	}
@@ -78,6 +61,7 @@ func Start(cfg *Config) error {
 	if cfg.Bridge.Enabled() {
 		bridgeScanner := scanner.NewScanner(cfg.Bridge.Config, badgerCache, bridgeInstance)
 		SafeGo("bridge-scanner", func() error {
+			log.Info().Str("bridge_interval", cfg.Bridge.Interval.String()).Msg("Bridge scanner configured")
 			return scheduler.Run(ctx, cfg.Bridge.Interval, bridgeScanner.ScanBlockRange)
 		}, errChan, &wg)
 
@@ -92,6 +76,7 @@ func Start(cfg *Config) error {
 
 	bridgeHubScanner := scanner.NewScanner(cfg.BridgeHub.Config, badgerCache, bridgeHubInstance)
 	SafeGo("bridgeHub-scanner", func() error {
+		log.Info().Str("bridgeHub_interval", cfg.BridgeHub.Interval.String()).Msg("BridgeHub scanner configured")
 		return scheduler.Run(ctx, cfg.BridgeHub.Interval, bridgeHubScanner.ScanBlockRange)
 	}, errChan, &wg)
 

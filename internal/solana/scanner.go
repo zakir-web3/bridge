@@ -24,11 +24,21 @@ type SlotCache interface {
 
 // SlotScannerConfig drives slot-based polling.
 type SlotScannerConfig struct {
-	Interval     time.Duration
-	StartSlot    uint64
-	SlotInterval uint64
-	SlotDelay    uint64
-	ClearCache   bool
+	Interval     time.Duration `mapstructure:"interval"      toml:"interval"`
+	StartSlot    uint64        `mapstructure:"start_slot"    toml:"start_slot"`
+	SlotInterval uint64        `mapstructure:"slot_interval" toml:"slot_interval"`
+	SlotDelay    uint64        `mapstructure:"slot_delay"    toml:"slot_delay"`
+	ClearCache   bool          `mapstructure:"clear_cache"   toml:"clear_cache"`
+}
+
+func (c SlotScannerConfig) Validate() error {
+	if c.Interval == 0 {
+		return errors.New("interval is required")
+	}
+	if c.SlotInterval == 0 {
+		return errors.New("slot_interval is required")
+	}
+	return nil
 }
 
 // SlotProcessor handles Solana program transactions.
