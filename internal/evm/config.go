@@ -28,7 +28,7 @@ func (c *Config) Validate() error {
 	if c.ChainId == nil {
 		return errors.New("chain_id is required")
 	}
-	if c.PrivKey == nil || c.PrivKey.D == nil {
+	if !PrivateKeyConfigured(c.PrivKey) {
 		return errors.New("priv_key is required")
 	}
 	if c.FeeHistoryBlockCount < 1 || c.FeeHistoryBlockCount > 1024 {

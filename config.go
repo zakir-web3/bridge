@@ -29,13 +29,13 @@ type Config struct {
 
 func (c *Config) String() string {
 	copyCfg := *c
-	if copyCfg.PrivKey != nil && copyCfg.PrivKey.D != nil {
+	if evm.PrivateKeyConfigured(copyCfg.PrivKey) {
 		copyCfg.PrivKey = &ecdsa.PrivateKey{}
 	}
-	if copyCfg.Bridge.AccConfig.PrivKey != nil && copyCfg.Bridge.AccConfig.PrivKey.D != nil {
+	if evm.PrivateKeyConfigured(copyCfg.Bridge.AccConfig.PrivKey) {
 		copyCfg.Bridge.AccConfig.PrivKey = &ecdsa.PrivateKey{}
 	}
-	if copyCfg.BridgeHub.AccConfig.PrivKey != nil && copyCfg.BridgeHub.AccConfig.PrivKey.D != nil {
+	if evm.PrivateKeyConfigured(copyCfg.BridgeHub.AccConfig.PrivKey) {
 		copyCfg.BridgeHub.AccConfig.PrivKey = &ecdsa.PrivateKey{}
 	}
 	data, _ := toml.Marshal(copyCfg)
@@ -80,8 +80,7 @@ func (c *Config) MergeConfig() {
 }
 
 func (c *Config) mergePrivKeyConfig(moduleConfig *evm.Config) {
-	if (moduleConfig.PrivKey == nil || moduleConfig.PrivKey.D == nil) &&
-		c.PrivKey != nil && c.PrivKey.D != nil {
+	if !evm.PrivateKeyConfigured(moduleConfig.PrivKey) && evm.PrivateKeyConfigured(c.PrivKey) {
 		moduleConfig.PrivKey = c.PrivKey
 	}
 }
