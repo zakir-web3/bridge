@@ -3,7 +3,7 @@ module github.com/zakir-web3/bridge
 go 1.25
 
 require (
-	github.com/dgraph-io/badger/v4 v4.8.0
+	github.com/dgraph-io/badger/v4 v4.9.6
 	github.com/ethereum/go-ethereum v1.17.5
 	github.com/gagliardetto/solana-go v1.12.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
@@ -78,7 +78,6 @@ require (
 	go.uber.org/zap v1.21.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/net v0.50.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.40.0 // indirect
