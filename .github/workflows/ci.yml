@@ -23,6 +23,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Lint
+        run: make lint
       - name: Test
         run: make test
       - name: Build

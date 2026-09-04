@@ -217,7 +217,14 @@ func (b *Bridge) FinalizeWithdrawals(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if withdrawals.RequestedTime == 0 || uint64(time.Now().Unix()) <= (withdrawals.RequestedTime+disputePeriod+1) {
+		if withdrawals.RequestedTime == 0 {
+			b.logger.Info().Hex("messageHash", msg[:]).
+				Uint64("nonce", withdrawals.Nonce).
+				Msg("message is still in dispute period, skipping")
+			continue
+		}
+		unlockAt := time.Unix(int64(withdrawals.RequestedTime+disputePeriod+1), 0) //nolint:gosec // G115: chain timestamps fit int64
+		if !time.Now().After(unlockAt) {
 			b.logger.Info().Hex("messageHash", msg[:]).
 				Uint64("nonce", withdrawals.Nonce).
 				Msg("message is still in dispute period, skipping")

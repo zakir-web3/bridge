@@ -57,7 +57,7 @@ func (c *testScanCache) GetLastScannedSlot(_ uint64) (uint64, error) {
 	return c.lastScanned, nil
 }
 
-func (c *testScanCache) SetLastScannedSlot(_ uint64, slot uint64) error {
+func (c *testScanCache) SetLastScannedSlot(_, slot uint64) error {
 	c.setCalled = true
 	c.lastScanned = slot
 	return nil

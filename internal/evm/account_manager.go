@@ -90,7 +90,7 @@ func (am *AccountManager) NewTransactOpts(ctx context.Context) *bind.TransactOpt
 
 func (am *AccountManager) WaitForTransactionReceipt(ctx context.Context, transaction *types.Transaction) (*types.Receipt, error) {
 	if am.cfg.NoSend {
-		return nil, nil
+		return nil, nil //nolint:nilnil // NoSend skips broadcast; callers only check error
 	}
 	receipt, err := bind.WaitMined(ctx, am.cli, transaction.Hash())
 	if err != nil {

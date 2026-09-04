@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -52,10 +53,13 @@ func TestRetryTransport_RetryableStatusReturnsError(t *testing.T) {
 		BackoffRate: 2,
 	})
 
-	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://example.com", nil)
 	require.NoError(t, err)
 
 	resp, err := rt.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		require.NoError(t, resp.Body.Close())
+	}
 	require.Error(t, err)
 	require.Nil(t, resp)
 	require.Equal(t, int32(2), atomic.LoadInt32(&closeCount))
@@ -75,10 +79,13 @@ func TestRetryTransport_ErrorWithoutResponseReturnsWrappedError(t *testing.T) {
 		BackoffRate: 2,
 	})
 
-	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://example.com", nil)
 	require.NoError(t, err)
 
 	resp, err := rt.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		require.NoError(t, resp.Body.Close())
+	}
 	require.Error(t, err)
 	require.Nil(t, resp)
 	require.Contains(t, err.Error(), "HTTP request failed after 2 attempts")

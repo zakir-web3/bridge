@@ -67,8 +67,8 @@ func (b *BridgeHub) ProcessLog(ctx context.Context, log types.Log) error {
 func (b *BridgeHub) GetFilterQuery(startBlock, endBlock uint64) []ethereum.FilterQuery {
 	return []ethereum.FilterQuery{
 		{
-			FromBlock: big.NewInt(int64(startBlock)),
-			ToBlock:   big.NewInt(int64(endBlock)),
+			FromBlock: new(big.Int).SetUint64(startBlock),
+			ToBlock:   new(big.Int).SetUint64(endBlock),
 			Addresses: []common.Address{b.cfg.BridgeHubAddress},
 			Topics: [][]common.Hash{
 				{

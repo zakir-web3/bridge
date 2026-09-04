@@ -1,6 +1,7 @@
 package contract
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -14,7 +15,7 @@ func (transfer *BridgeERC20Transfer) ToTypedData(srcChainId, hubChainId *big.Int
 		verifyingContract,
 		transfer.Raw.BlockNumber,
 		transfer.Raw.TxHash,
-		uint32(transfer.Raw.Index),
+		receiptLogIndex(transfer.Raw.Index),
 	)
 }
 
@@ -27,9 +28,16 @@ func (transfer *BridgeERC20Transfer) ToDepositConfirm(srcChainId *big.Int, signa
 		ChainId:     srcChainId,
 		BlockNumber: transfer.Raw.BlockNumber,
 		TxHash:      transfer.Raw.TxHash,
-		Index:       uint32(transfer.Raw.Index),
+		Index:       receiptLogIndex(transfer.Raw.Index),
 		Signature:   signature,
 	}
+}
+
+func receiptLogIndex(index uint) uint32 {
+	if index > math.MaxUint32 {
+		panic("receipt log index overflows uint32")
+	}
+	return uint32(index)
 }
 
 // BridgeERC20TransferDepositTypedData builds EIP-712 typed data for deposit confirmation.

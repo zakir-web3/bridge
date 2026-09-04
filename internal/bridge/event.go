@@ -21,6 +21,8 @@ const DepositEventHash = "0x7cfff908a4b583f36430b25d75964c458d8ede8a99bd61be750e
 // FinalizedWithdrawalEventHash cast keccak "FinalizedWithdrawal(bytes32,address,address,address,uint256,uint64)"
 const FinalizedWithdrawalEventHash = "0x04cafa25a7826c4415eac718e45fc84f69b5539748e0206adbae70f919887548"
 
+var errDepositEventNotFound = errors.New("deposit event not found")
+
 func (b *Bridge) ProcessLog(ctx context.Context, log types.Log) error {
 	if len(log.Topics) == 0 {
 		return nil
@@ -42,7 +44,7 @@ func (b *Bridge) ProcessLog(ctx context.Context, log types.Log) error {
 			return nil
 		}
 		depositEvent, err := b.QueryDepositEvent(ctx, log.TxHash)
-		if err != nil {
+		if err != nil && !errors.Is(err, errDepositEventNotFound) {
 			return errors.Wrap(err, "query deposit event")
 		}
 		if depositEvent != nil {
@@ -84,8 +86,8 @@ func (b *Bridge) GetFilterQuery(startBlock, endBlock uint64) []ethereum.FilterQu
 	return []ethereum.FilterQuery{
 		// Query for ERC20 transfer events from bridge tokens
 		{
-			FromBlock: big.NewInt(int64(startBlock)),
-			ToBlock:   big.NewInt(int64(endBlock)),
+			FromBlock: new(big.Int).SetUint64(startBlock),
+			ToBlock:   new(big.Int).SetUint64(endBlock),
 			Addresses: b.cfg.BridgeTokens,
 			Topics: [][]common.Hash{
 				{
@@ -99,8 +101,8 @@ func (b *Bridge) GetFilterQuery(startBlock, endBlock uint64) []ethereum.FilterQu
 		},
 		// Query for finalized withdrawal events from bridge address
 		{
-			FromBlock: big.NewInt(int64(startBlock)),
-			ToBlock:   big.NewInt(int64(endBlock)),
+			FromBlock: new(big.Int).SetUint64(startBlock),
+			ToBlock:   new(big.Int).SetUint64(endBlock),
 			Addresses: []common.Address{b.cfg.BridgeAddress},
 			Topics: [][]common.Hash{
 				{
@@ -142,5 +144,5 @@ func (b *Bridge) QueryDepositEvent(ctx context.Context, txHash common.Hash) (*co
 
 		return depositEvent, nil
 	}
-	return nil, nil
+	return nil, errDepositEventNotFound
 }
