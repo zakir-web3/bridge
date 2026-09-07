@@ -4,6 +4,13 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const SRC_CHAIN_ID = 1337n;
+const SOLANA_CHAIN_ID = 900001n;
+
+// Non-EVM-shaped bytes32 (high bits set), like a Solana SPL mint pubkey.
+const SOLANA_MINT =
+  "0x0100000000000000000000000000000000000000000000000000000000000001";
+const SOLANA_DESTINATION =
+  "0x0200000000000000000000000000000000000000000000000000000000000002";
 
 function addressToBytes32(address: string) {
   return ethers.zeroPadValue(address, 32);
@@ -235,5 +242,56 @@ describe("BridgeHub core flows", function () {
       { ...deposit, signature: { r: sig.r, s: sig.s, v: sig.v } },
     ]);
     expect(await bridgedToken.balanceOf(user.address)).to.equal(amount);
+  });
+
+  it("stores reverse token pair for Solana SPL mint withdraw lookup", async function () {
+    const bridged = await bridgedToken.getAddress();
+    await bridgeHub.setTokenPair(SOLANA_CHAIN_ID, SOLANA_MINT, 6, bridged);
+
+    expect(await bridgeHub.tokenPair(SOLANA_CHAIN_ID, SOLANA_MINT)).to.equal(
+      addressToBytes32(bridged)
+    );
+    expect(
+      await bridgeHub.tokenPair(
+        SOLANA_CHAIN_ID,
+        addressToBytes32(bridged)
+      )
+    ).to.equal(SOLANA_MINT);
+    expect(await bridgeHub.tokenDecimalDiff(SOLANA_CHAIN_ID, SOLANA_MINT)).to.equal(
+      -12n
+    );
+    expect(
+      await bridgeHub.tokenDecimalDiff(
+        SOLANA_CHAIN_ID,
+        addressToBytes32(bridged)
+      )
+    ).to.equal(12n);
+  });
+
+  it("withdraw to Solana writes SPL mint and destination as bytes32", async function () {
+    const bridged = await bridgedToken.getAddress();
+    await bridgeHub.setTokenPair(SOLANA_CHAIN_ID, SOLANA_MINT, 6, bridged);
+
+    const amount = 100_000_000_000_000_000_000n;
+    await bridgedToken.mint(user.address, amount);
+    await bridgedToken
+      .connect(user)
+      .approve(await bridgeHub.getAddress(), amount);
+
+    await expect(
+      bridgeHub
+        .connect(user)
+        .withdraw(SOLANA_DESTINATION, bridged, amount, SOLANA_CHAIN_ID)
+    )
+      .to.emit(bridgeHub, "Withdraw")
+      .withArgs(
+        anyValue,
+        user.address,
+        SOLANA_DESTINATION,
+        SOLANA_MINT,
+        100_000_000n,
+        SOLANA_CHAIN_ID,
+        1n
+      );
   });
 });

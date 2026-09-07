@@ -122,6 +122,16 @@ async function main() {
       );
     }
 
+    const bridgedTokenBytes32 = addressToBytes32(bridgedTokenAddress);
+    const reverseToken = await bridgeHub.tokenPair(chainIdNum, bridgedTokenBytes32);
+    if (reverseToken !== ethers.ZeroHash) {
+      throw new ConfigurationError(
+        "桥接代币 withdraw 映射已存在",
+        `链 ${chainIdNum} 上 bridged token 已映射到 ${reverseToken}`,
+        "请检查是否重复配置 token pair"
+      );
+    }
+
     console.log("\n=== 执行 setTokenPair ===");
     const tx = await bridgeHub.setTokenPair(
       chainIdNum,
@@ -137,20 +147,18 @@ async function main() {
     console.log("✅ 交易确认成功!");
     console.log("区块号:", receipt?.blockNumber);
 
-    if (pairMode === "evm") {
-      const remoteToken = await bridgeHub.tokenPair(
-        chainIdNum,
-        ethers.zeroPadValue(bridgedTokenAddress, 32)
+    const remoteToken = await bridgeHub.tokenPair(
+      chainIdNum,
+      bridgedTokenBytes32
+    );
+    if (remoteToken.toLowerCase() !== srcTokenBytes32.toLowerCase()) {
+      throw new ConfigurationError(
+        "Withdraw token pair 设置失败",
+        `期望: ${srcTokenBytes32}, 实际: ${remoteToken}`,
+        "请检查交易是否成功执行"
       );
-      if (remoteToken.toLowerCase() !== srcTokenBytes32.toLowerCase()) {
-        throw new ConfigurationError(
-          "Withdraw token pair 设置失败",
-          `期望: ${srcTokenBytes32}, 实际: ${remoteToken}`,
-          "请检查交易是否成功执行"
-        );
-      }
-      console.log("✅ Withdraw 映射已自动配置");
     }
+    console.log("✅ Withdraw 映射已自动配置");
 
     const newBridgedToken = await bridgeHub.tokenPair(
       chainIdNum,

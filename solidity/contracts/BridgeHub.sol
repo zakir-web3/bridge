@@ -284,10 +284,8 @@ contract BridgeHub is
         tokenPair[chainId][srcToken] = dstTokenBytes32;
         tokenDecimalDiff[chainId][srcToken] = decimalDiff;
 
-        if (_isEvmTokenAddress(srcToken)) {
-            tokenPair[chainId][dstTokenBytes32] = srcToken;
-            tokenDecimalDiff[chainId][dstTokenBytes32] = -decimalDiff;
-        }
+        tokenPair[chainId][dstTokenBytes32] = srcToken;
+        tokenDecimalDiff[chainId][dstTokenBytes32] = -decimalDiff;
 
         emit TokenPairSet(
             chainId,
