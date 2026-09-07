@@ -18,8 +18,8 @@ const ERC20TransferEventHash = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a1
 // DepositEventHash cast keccak "Deposit(address,address,address,uint256)"
 const DepositEventHash = "0x7cfff908a4b583f36430b25d75964c458d8ede8a99bd61be750e97ee1b2f3a96"
 
-// FinalizedWithdrawalEventHash cast keccak "FinalizedWithdrawal(bytes32,address,address,address,uint256,uint64)"
-const FinalizedWithdrawalEventHash = "0x04cafa25a7826c4415eac718e45fc84f69b5539748e0206adbae70f919887548"
+// FinalizedWithdrawalEventHash cast keccak "FinalizedWithdrawal(bytes32,address,bytes32,bytes32,uint256,uint64)"
+const FinalizedWithdrawalEventHash = "0x070f33f8f3095f4b7388e8db49f1902a3005e9cc9cc4ada25316b429403db4d8"
 
 var errDepositEventNotFound = errors.New("deposit event not found")
 

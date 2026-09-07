@@ -91,8 +91,8 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
     const types = {
       Withdraw: [
         { name: "user", type: "address" },
-        { name: "destination", type: "address" },
-        { name: "token", type: "address" },
+        { name: "destination", type: "bytes32" },
+        { name: "token", type: "bytes32" },
         { name: "amount", type: "uint256" },
         { name: "chainId", type: "uint256" },
         { name: "nonce", type: "uint64" },
@@ -140,7 +140,12 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
     for (let i = 0; i < count; i++) {
       await bridgeHub
         .connect(user)
-        .withdraw(user.address, bridged, WITHDRAW_AMOUNT, SRC_CHAIN_ID);
+        .withdraw(
+          addressToBytes32(user.address),
+          bridged,
+          WITHDRAW_AMOUNT,
+          SRC_CHAIN_ID
+        );
     }
   }
 
@@ -163,8 +168,8 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
     const token = await srcToken.getAddress();
     const sig = await signWithdraw(bridgeHub, admin, {
       user: user.address,
-      destination: user.address,
-      token,
+      destination: addressToBytes32(user.address),
+      token: addressToBytes32(token),
       amount: WITHDRAW_AMOUNT,
       chainId: SRC_CHAIN_ID,
       nonce: targetNonce,
@@ -173,8 +178,8 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
     const tx = await bridgeHub.connect(admin).withdrawConfirm([
       {
         user: user.address,
-        destination: user.address,
-        token,
+        destination: addressToBytes32(user.address),
+        token: addressToBytes32(token),
         amount: WITHDRAW_AMOUNT,
         chainId: SRC_CHAIN_ID,
         nonce: targetNonce,
@@ -196,11 +201,13 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
       powers: [100n],
     };
     const sig = await signUpdateValidatorSet(bridgeHub, admin, update);
-    const tx = await bridgeHub.connect(admin).updateValidatorSetConfirm(update, {
-      r: sig.r,
-      s: sig.s,
-      v: sig.v,
-    });
+    const tx = await bridgeHub
+      .connect(admin)
+      .updateValidatorSetConfirm(update, {
+        r: sig.r,
+        s: sig.s,
+        v: sig.v,
+      });
     const receipt = await tx.wait();
     return BigInt(receipt!.gasUsed);
   }
@@ -273,7 +280,13 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
     );
     for (const row of rows) {
       console.log(
-        `${String(row.pendingCount).padStart(7)} | ${String(row.withdrawConfirmFirst).padStart(21)} | ${String(row.withdrawConfirmLast).padStart(22)} | ${String(row.scanDelta).padStart(6)} | ${String(row.validatorSetConfirmLast).padStart(27)}`
+        `${String(row.pendingCount).padStart(7)} | ${String(
+          row.withdrawConfirmFirst
+        ).padStart(21)} | ${String(row.withdrawConfirmLast).padStart(
+          22
+        )} | ${String(row.scanDelta).padStart(6)} | ${String(
+          row.validatorSetConfirmLast
+        ).padStart(27)}`
       );
     }
 
@@ -282,7 +295,14 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
       `Baseline (pending=1, last): ${baseline.withdrawConfirmLast} gas`
     );
     console.log(
-      `At pending=${largest.pendingCount}, last confirm: ${largest.withdrawConfirmLast} gas (+${((Number(largest.withdrawConfirmLast) / Number(baseline.withdrawConfirmLast) - 1) * 100).toFixed(0)}%)`
+      `At pending=${largest.pendingCount}, last confirm: ${
+        largest.withdrawConfirmLast
+      } gas (+${(
+        (Number(largest.withdrawConfirmLast) /
+          Number(baseline.withdrawConfirmLast) -
+          1) *
+        100
+      ).toFixed(0)}%)`
     );
     console.log(
       `Approx. linear scan cost: ~${perItem} gas per extra pending message`
@@ -298,12 +318,16 @@ describe("BridgeHub pendingMessages gas benchmark", function () {
       const target = base * t.factor;
       const hit = rows.find((r) => Number(r.withdrawConfirmLast) >= target);
       console.log(
-        `${t.label} (${Math.round(target).toLocaleString()} gas): ${hit ? `~${hit.pendingCount} pending` : "not reached in this run"}`
+        `${t.label} (${Math.round(target).toLocaleString()} gas): ${
+          hit ? `~${hit.pendingCount} pending` : "not reached in this run"
+        }`
       );
     }
 
     if (perItem > 0n) {
-      console.log("\n--- Extrapolated pending count (withdrawConfirm last) ---");
+      console.log(
+        "\n--- Extrapolated pending count (withdrawConfirm last) ---"
+      );
       for (const [chain, limit] of Object.entries(BLOCK_GAS_LIMITS)) {
         for (const pct of [10, 33, 50]) {
           const budget = (limit * BigInt(pct)) / 100n;

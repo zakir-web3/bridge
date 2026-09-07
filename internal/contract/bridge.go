@@ -33,8 +33,8 @@ func (w *BridgeFinalizedWithdrawal) ToTypedData(srcChainId, chainId *big.Int, ve
 			},
 			"Withdraw": {
 				{Name: "user", Type: "address"},
-				{Name: "destination", Type: "address"},
-				{Name: "token", Type: "address"},
+				{Name: "destination", Type: "bytes32"},
+				{Name: "token", Type: "bytes32"},
 				{Name: "amount", Type: "uint256"},
 				{Name: "chainId", Type: "uint256"},
 				{Name: "nonce", Type: "uint64"},
@@ -42,9 +42,9 @@ func (w *BridgeFinalizedWithdrawal) ToTypedData(srcChainId, chainId *big.Int, ve
 		},
 		PrimaryType: "Withdraw",
 		Message: apitypes.TypedDataMessage{
-			"user":        w.User.String(),
-			"destination": w.Destination.String(),
-			"token":       w.Token.String(),
+			"user":        w.User.Hex(),
+			"destination": Bytes32Hex(w.Destination),
+			"token":       Bytes32Hex(w.Token),
 			"amount":      w.Amount.String(),
 			"chainId":     srcChainId.String(),
 			"nonce":       strconv.FormatUint(w.Nonce, 10),

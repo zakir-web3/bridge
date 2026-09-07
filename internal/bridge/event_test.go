@@ -12,7 +12,7 @@ import (
 func TestEventHashes(t *testing.T) {
 	assert.Equal(t, "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", ERC20TransferEventHash)
 	assert.Equal(t, "0x7cfff908a4b583f36430b25d75964c458d8ede8a99bd61be750e97ee1b2f3a96", DepositEventHash)
-	assert.Equal(t, "0x04cafa25a7826c4415eac718e45fc84f69b5539748e0206adbae70f919887548", FinalizedWithdrawalEventHash)
+	assert.Equal(t, "0x070f33f8f3095f4b7388e8db49f1902a3005e9cc9cc4ada25316b429403db4d8", FinalizedWithdrawalEventHash)
 }
 
 func TestIsBridgeToken(t *testing.T) {

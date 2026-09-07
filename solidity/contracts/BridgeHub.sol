@@ -27,8 +27,8 @@ struct DepositConfirm {
 
 struct WithdrawRequest {
     address user;
-    address destination;
-    address token;
+    bytes32 destination;
+    bytes32 token;
     uint256 amount;
     uint256 chainId;
     uint64 nonce;
@@ -36,8 +36,8 @@ struct WithdrawRequest {
 
 struct WithdrawConfirm {
     address user;
-    address destination;
-    address token;
+    bytes32 destination;
+    bytes32 token;
     uint256 amount;
     uint256 chainId;
     uint64 nonce;
@@ -53,7 +53,7 @@ struct ValidatorSetUpdate {
 
 struct WithdrawWithPermit {
     address user;
-    address destination;
+    bytes32 destination;
     address token;
     uint256 amount;
     uint256 chainId;
@@ -86,7 +86,7 @@ bytes32 constant DEPOSIT_TYPEHASH = keccak256(
 
 // EIP-712 type hash for withdraw message
 bytes32 constant WITHDRAW_TYPEHASH = keccak256(
-    "Withdraw(address user,address destination,address token,uint256 amount,uint256 chainId,uint64 nonce)"
+    "Withdraw(address user,bytes32 destination,bytes32 token,uint256 amount,uint256 chainId,uint64 nonce)"
 );
 
 // EIP-712 type hash for update validator set message
@@ -162,8 +162,8 @@ contract BridgeHub is
     event Withdraw(
         bytes32 indexed message,
         address indexed user,
-        address destination,
-        address indexed token,
+        bytes32 destination,
+        bytes32 indexed token,
         uint256 amount,
         uint256 chainId,
         uint64 nonce
@@ -274,16 +274,10 @@ contract BridgeHub is
             tokenPair[chainId][srcToken] == bytes32(0),
             "Token pair already set"
         );
-        require(
-            srcTokenDecimal <= MAX_TOKEN_DECIMALS,
-            "Invalid src decimals"
-        );
+        require(srcTokenDecimal <= MAX_TOKEN_DECIMALS, "Invalid src decimals");
 
         uint8 dstTokenDecimal = IERC20Metadata(dstToken).decimals();
-        require(
-            dstTokenDecimal <= MAX_TOKEN_DECIMALS,
-            "Invalid dst decimals"
-        );
+        require(dstTokenDecimal <= MAX_TOKEN_DECIMALS, "Invalid dst decimals");
         int8 decimalDiff = int8(srcTokenDecimal) - int8(dstTokenDecimal);
         bytes32 dstTokenBytes32 = _addressToBytes32(dstToken);
 
@@ -644,8 +638,8 @@ contract BridgeHub is
 
     function makeWithdrawMessage(
         address user,
-        address destination,
-        address token,
+        bytes32 destination,
+        bytes32 token,
         uint256 amount,
         uint256 chainId,
         uint64 nonce
@@ -768,7 +762,7 @@ contract BridgeHub is
     }
 
     function withdraw(
-        address destination,
+        bytes32 destination,
         address token,
         uint256 amount,
         uint256 chainId
@@ -811,7 +805,7 @@ contract BridgeHub is
 
     function _withdraw(
         address user,
-        address destination,
+        bytes32 destination,
         address token,
         uint256 amount,
         uint256 chainId
@@ -819,14 +813,13 @@ contract BridgeHub is
         uint256 fee = tokenWithdrawFee[token];
         require(amount > fee, "Amount must exceed fee");
         require(user != address(0), "Invalid user address");
-        require(destination != address(0), "Invalid destination address");
+        require(destination != bytes32(0), "Invalid destination");
         require(token != address(0), "Invalid token address");
         require(chainId != 0, "Invalid chainId");
 
         bytes32 bridgedTokenBytes32 = _addressToBytes32(token);
         bytes32 srcTokenBytes32 = tokenPair[chainId][bridgedTokenBytes32];
         require(srcTokenBytes32 != bytes32(0), "Token not found");
-        address bridgeToken = _bytes32ToAddress(srcTokenBytes32);
 
         // Transfer tokens from user to contract
         IERC20(token).safeTransferFrom(user, address(this), amount);
@@ -845,7 +838,7 @@ contract BridgeHub is
         bytes32 message = makeWithdrawMessage(
             user,
             destination,
-            bridgeToken,
+            srcTokenBytes32,
             messageAmount,
             chainId,
             nonce
@@ -858,7 +851,7 @@ contract BridgeHub is
             message,
             user,
             destination,
-            bridgeToken,
+            srcTokenBytes32,
             messageAmount,
             chainId,
             nonce
@@ -974,10 +967,7 @@ contract BridgeHub is
         ValidatorSetUpdate calldata validatorSet,
         Signature calldata signature
     ) external whenNotPaused nonReentrant onlyValidator {
-        require(
-            validatorSet.epoch > epoch,
-            "Stale validator set update"
-        );
+        require(validatorSet.epoch > epoch, "Stale validator set update");
 
         bytes32 message = makeUpdateValidatorSetMessage(
             validatorSet.epoch,

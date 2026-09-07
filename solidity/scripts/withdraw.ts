@@ -82,9 +82,13 @@ async function main() {
 
   console.log("💸 开始执行 withdraw 操作...");
   const withdrawReceipt = await sendTx(signer, (nonce) =>
-    bridgeHub.withdraw(DESTINATION_ADDRESS, TOKEN_ADDRESS, amount, chainId, {
-      nonce,
-    })
+    bridgeHub.withdraw(
+      ethers.zeroPadValue(DESTINATION_ADDRESS, 32),
+      TOKEN_ADDRESS,
+      amount,
+      chainId,
+      { nonce }
+    )
   );
   console.log(`✅ Withdraw 成功！`);
   console.log(`   区块号: ${withdrawReceipt.blockNumber}`);

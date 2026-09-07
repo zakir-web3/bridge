@@ -22,8 +22,8 @@ func TestBridgeHubWithdraw_ToTypedData(t *testing.T) {
 
 	withdraw := &BridgeHubWithdraw{
 		User:        userAddr,
-		Destination: destinationAddr,
-		Token:       tokenAddr,
+		Destination: AddressToBytes32(destinationAddr),
+		Token:       AddressToBytes32(tokenAddr),
 		Amount:      big.NewInt(1e18),
 		ChainId:     srcChainId,
 		Nonce:       12345,
@@ -46,11 +46,11 @@ func TestBridgeHubWithdraw_ToTypedData(t *testing.T) {
 
 	typedDataHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x2d6d11d3b045962a4c69066bfc5511cdb6f608d12fde188b54ef657ab7672573", typedDataHash.String())
+	assert.Equal(t, "0x2486f3baf331176f06d4eda1e971483466ca196931705258bc5ef971b81d4ad2", typedDataHash.String())
 
 	hash, _, err := apitypes.TypedDataAndHash(typedData)
 	assert.NoError(t, err)
-	assert.Equal(t, "0xd77998b767c9c3e7c538f8fae2cd60480c9965bd8205cf3749bcb1b075e5ec9a", common.BytesToHash(hash).String())
+	assert.Equal(t, "0x04f7234d8a5f15bd6cd22589a81bbff694d8b707f81df216635d52a3934a84e8", common.BytesToHash(hash).String())
 }
 
 func TestBridgeHubRequestedValidatorSetUpdate_ToTypedData(t *testing.T) {
@@ -104,8 +104,8 @@ func TestMessageSignature_ToWithdrawalRequest(t *testing.T) {
 
 	withdraw := &BridgeHubWithdraw{
 		User:        user,
-		Destination: user,
-		Token:       token,
+		Destination: AddressToBytes32(user),
+		Token:       AddressToBytes32(token),
 		Amount:      big.NewInt(1e18),
 		Nonce:       12345,
 	}
@@ -121,8 +121,8 @@ func TestMessageSignature_ToWithdrawalRequest(t *testing.T) {
 	got, err := msg.ToWithdrawalRequest(ValidatorSet{Validators: []common.Address{v0, v1}})
 	require.NoError(t, err)
 	assert.Equal(t, user, got.User)
-	assert.Equal(t, user, got.Destination)
-	assert.Equal(t, token, got.Token)
+	assert.Equal(t, AddressToBytes32(user), got.Destination)
+	assert.Equal(t, AddressToBytes32(token), got.Token)
 	assert.Equal(t, big.NewInt(1e18), got.Amount)
 	assert.Equal(t, chainId, got.ChainId)
 	assert.Equal(t, uint64(12345), got.Nonce)
@@ -140,8 +140,8 @@ func TestMessageSignature_ToWithdrawalRequest_RejectsSignerMismatch(t *testing.T
 	verifying := common.HexToAddress("0x3000000000000000000000000000000000000003")
 	typedData := (&BridgeHubWithdraw{
 		User:        user,
-		Destination: user,
-		Token:       token,
+		Destination: AddressToBytes32(user),
+		Token:       AddressToBytes32(token),
 		Amount:      big.NewInt(1),
 		Nonce:       1,
 	}).ToTypedData(nil, big.NewInt(1337), verifying)

@@ -16,7 +16,7 @@ import (
 	"github.com/zakir-web3/bridge/internal/evm"
 )
 
-const WithdrawEIP712Type = "Withdraw(address user,address destination,address token,uint256 amount,uint256 chainId,uint64 nonce)"
+const WithdrawEIP712Type = "Withdraw(address user,bytes32 destination,bytes32 token,uint256 amount,uint256 chainId,uint64 nonce)"
 
 type HubContract interface {
 	DepositConfirm(ctx context.Context, chainId *big.Int, transfer ...*contract.BridgeERC20Transfer) error

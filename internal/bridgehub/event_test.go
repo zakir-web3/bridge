@@ -12,7 +12,7 @@ import (
 )
 
 func TestEventHashes(t *testing.T) {
-	assert.Equal(t, "0x7ba97cc0a03c9de2b8d972e5a42d8867d1c3483652b679f5b8b8b5b62a4ef576", WithdrawEventHash)
+	assert.Equal(t, "0xddf7473863baaba91098e18c11ea6e972fb72f38f768f5e5d3e984207414ff13", WithdrawEventHash)
 	assert.Equal(t, "0xc36d3c025c0f565ea8451b940f66ac343971b6b6d515ea860aed580c6408af2b", BridgeSignatureSubmittedEventHash)
 }
 

@@ -76,7 +76,7 @@ import "./Signature.sol";
 
 // EIP-712 type hashes
 bytes32 constant REQUEST_WITHDRAWAL_TYPEHASH = keccak256(
-    "Withdraw(address user,address destination,address token,uint256 amount,uint256 chainId,uint64 nonce)"
+    "Withdraw(address user,bytes32 destination,bytes32 token,uint256 amount,uint256 chainId,uint64 nonce)"
 );
 
 bytes32 constant UPDATE_VALIDATOR_SET_TYPEHASH = keccak256(
@@ -140,8 +140,8 @@ struct PendingValidatorSetUpdate {
 
 struct Withdrawal {
     address user;
-    address destination;
-    address token;
+    bytes32 destination;
+    bytes32 token;
     uint256 amount;
     uint256 chainId;
     uint64 nonce;
@@ -152,8 +152,8 @@ struct Withdrawal {
 
 struct WithdrawalRequest {
     address user;
-    address destination;
-    address token;
+    bytes32 destination;
+    bytes32 token;
     uint256 amount;
     uint256 chainId;
     uint64 nonce;
@@ -204,8 +204,8 @@ contract Bridge is Pausable, ReentrancyGuard {
     event RequestedWithdrawal(
         bytes32 message,
         address indexed user,
-        address destination,
-        address token,
+        bytes32 destination,
+        bytes32 token,
         uint256 amount,
         uint256 chainId,
         uint64 nonce,
@@ -216,8 +216,8 @@ contract Bridge is Pausable, ReentrancyGuard {
     event FinalizedWithdrawal(
         bytes32 message,
         address indexed user,
-        address destination,
-        address token,
+        bytes32 destination,
+        bytes32 token,
         uint256 amount,
         uint64 nonce
     );
@@ -350,8 +350,8 @@ contract Bridge is Pausable, ReentrancyGuard {
 
     function requestWithdrawal(
         address user,
-        address destination,
-        address token,
+        bytes32 destination,
+        bytes32 token,
         uint256 amount,
         uint256 chainId,
         uint64 nonce,
@@ -460,8 +460,13 @@ contract Bridge is Pausable, ReentrancyGuard {
         }
 
         finalizedWithdrawals[message] = true;
-        IERC20(withdrawal.token).safeTransfer(
-            withdrawal.destination,
+        require(
+            _isEvmBytes32(withdrawal.destination) &&
+                _isEvmBytes32(withdrawal.token),
+            "Invalid EVM withdraw token or destination"
+        );
+        IERC20(_bytes32ToAddress(withdrawal.token)).safeTransfer(
+            _bytes32ToAddress(withdrawal.destination),
             withdrawal.amount
         );
         emit FinalizedWithdrawal(
@@ -490,6 +495,14 @@ contract Bridge is Pausable, ReentrancyGuard {
 
     function getCurBlockNumber() private view returns (uint64) {
         return uint64(block.number);
+    }
+
+    function _bytes32ToAddress(bytes32 value) private pure returns (address) {
+        return address(uint160(uint256(value)));
+    }
+
+    function _isEvmBytes32(bytes32 value) private pure returns (bool) {
+        return uint256(value) <= type(uint160).max;
     }
 
     // Returns 0 if no error

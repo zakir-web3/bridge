@@ -11,7 +11,6 @@ import (
 )
 
 func TestBridgeFinalizedWithdrawal_ToTypedData(t *testing.T) {
-	// Prepare test data
 	userAddr := common.HexToAddress("0x1000000000000000000000000000000000000001")
 	destinationAddr := common.HexToAddress("0x1000000000000000000000000000000000000001")
 	tokenAddr := common.HexToAddress("0x2000000000000000000000000000000000000002")
@@ -20,11 +19,10 @@ func TestBridgeFinalizedWithdrawal_ToTypedData(t *testing.T) {
 	srcChainId := big.NewInt(1337)
 	chainId := big.NewInt(97)
 
-	// Create BridgeFinalizedWithdrawal instance
 	withdrawal := &BridgeFinalizedWithdrawal{
 		User:        userAddr,
-		Destination: destinationAddr,
-		Token:       tokenAddr,
+		Destination: AddressToBytes32(destinationAddr),
+		Token:       AddressToBytes32(tokenAddr),
 		Amount:      big.NewInt(1e18),
 		Nonce:       12345,
 		Raw: types.Log{
@@ -40,20 +38,17 @@ func TestBridgeFinalizedWithdrawal_ToTypedData(t *testing.T) {
 	typedData := withdrawal.ToTypedData(srcChainId, chainId, verifyingContract)
 	assert.NotNil(t, typedData)
 
-	// Test domain separator hash
 	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
 	assert.NoError(t, err)
 	assert.Equal(t, "0x25e1c2d18a3106cd706593b1aa9b6e16121734a2b98f8fa3e8bc690576e2da35", domainSeparator.String(), "Domain separator should not be empty")
 
-	// Test Withdraw struct hash
 	typedDataHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x2d6d11d3b045962a4c69066bfc5511cdb6f608d12fde188b54ef657ab7672573", typedDataHash.String(), "Typed data hash should not be empty")
+	assert.Equal(t, "0x2486f3baf331176f06d4eda1e971483466ca196931705258bc5ef971b81d4ad2", typedDataHash.String(), "Typed data hash should not be empty")
 
-	// Test complete typed data hash
 	hash, _, err := apitypes.TypedDataAndHash(typedData)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x14391db840dfb37714b041446db8155253dbbfeb3566a742b0fa9fca4edcb1c3", common.BytesToHash(hash).String(), "Complete typed data hash should not be empty")
+	assert.Equal(t, "0x39e51aa182071d8a9efef2a23f2f2dffbcb80509e75a14e2002bfdd09dbebecb", common.BytesToHash(hash).String(), "Complete typed data hash should not be empty")
 }
 
 func TestBridgeFinalizedWithdrawal_ToWithdrawConfirm(t *testing.T) {
@@ -65,16 +60,16 @@ func TestBridgeFinalizedWithdrawal_ToWithdrawConfirm(t *testing.T) {
 
 	withdrawal := &BridgeFinalizedWithdrawal{
 		User:        userAddr,
-		Destination: destAddr,
-		Token:       tokenAddr,
+		Destination: AddressToBytes32(destAddr),
+		Token:       AddressToBytes32(tokenAddr),
 		Amount:      big.NewInt(1e18),
 		Nonce:       12345,
 	}
 
 	got := withdrawal.ToWithdrawConfirm(chainId, sig)
 	assert.Equal(t, userAddr, got.User)
-	assert.Equal(t, destAddr, got.Destination)
-	assert.Equal(t, tokenAddr, got.Token)
+	assert.Equal(t, AddressToBytes32(destAddr), got.Destination)
+	assert.Equal(t, AddressToBytes32(tokenAddr), got.Token)
 	assert.Equal(t, big.NewInt(1e18), got.Amount)
 	assert.Equal(t, chainId, got.ChainId)
 	assert.Equal(t, uint64(12345), got.Nonce)

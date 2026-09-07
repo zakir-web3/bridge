@@ -72,8 +72,8 @@ func (w *BridgeHubWithdraw) ToTypedData(_, chainId *big.Int, verifyingContract c
 			},
 			"Withdraw": {
 				{Name: "user", Type: "address"},
-				{Name: "destination", Type: "address"},
-				{Name: "token", Type: "address"},
+				{Name: "destination", Type: "bytes32"},
+				{Name: "token", Type: "bytes32"},
 				{Name: "amount", Type: "uint256"},
 				{Name: "chainId", Type: "uint256"},
 				{Name: "nonce", Type: "uint64"},
@@ -81,9 +81,9 @@ func (w *BridgeHubWithdraw) ToTypedData(_, chainId *big.Int, verifyingContract c
 		},
 		PrimaryType: "Withdraw",
 		Message: apitypes.TypedDataMessage{
-			"user":        w.User.String(),
-			"destination": w.Destination.String(),
-			"token":       w.Token.String(),
+			"user":        w.User.Hex(),
+			"destination": Bytes32Hex(w.Destination),
+			"token":       Bytes32Hex(w.Token),
 			"amount":      w.Amount.String(),
 			"chainId":     chainId.String(),
 			"nonce":       strconv.FormatUint(w.Nonce, 10),
@@ -139,13 +139,13 @@ func (m *MessageSignature) ToWithdrawalRequest(validatorSet ValidatorSet) (Withd
 	userBytes := encodedData[0:32]
 	user := common.BytesToAddress(userBytes[12:]) // address is right-padded, take last 20 bytes
 
-	// Parse destination address (next 32 bytes)
-	destBytes := encodedData[32:64]
-	destination := common.BytesToAddress(destBytes[12:]) // address is right-padded, take last 20 bytes
+	// Parse destination bytes32 (next 32 bytes)
+	var destination [32]byte
+	copy(destination[:], encodedData[32:64])
 
-	// Parse token address (next 32 bytes)
-	tokenBytes := encodedData[64:96]
-	token := common.BytesToAddress(tokenBytes[12:]) // address is right-padded, take last 20 bytes
+	// Parse token bytes32 (next 32 bytes)
+	var token [32]byte
+	copy(token[:], encodedData[64:96])
 
 	// Parse amount (next 32 bytes)
 	amountBytes := encodedData[96:128]

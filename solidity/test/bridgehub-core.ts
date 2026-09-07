@@ -146,7 +146,7 @@ describe("BridgeHub core flows", function () {
       bridgeHub
         .connect(user)
         .withdraw(
-          user.address,
+          addressToBytes32(user.address),
           await bridgedToken.getAddress(),
           1_000_000_000_000_000_000n,
           SRC_CHAIN_ID
@@ -168,7 +168,7 @@ describe("BridgeHub core flows", function () {
       bridgeHub
         .connect(user)
         .withdraw(
-          user.address,
+          addressToBytes32(user.address),
           await bridgedToken.getAddress(),
           fee,
           SRC_CHAIN_ID
@@ -179,7 +179,7 @@ describe("BridgeHub core flows", function () {
       bridgeHub
         .connect(user)
         .withdraw(
-          user.address,
+          addressToBytes32(user.address),
           await bridgedToken.getAddress(),
           amount,
           SRC_CHAIN_ID
@@ -189,8 +189,8 @@ describe("BridgeHub core flows", function () {
       .withArgs(
         anyValue,
         user.address,
-        user.address,
-        await srcToken.getAddress(),
+        addressToBytes32(user.address),
+        addressToBytes32(await srcToken.getAddress()),
         99_000_000n,
         SRC_CHAIN_ID,
         1n
@@ -205,7 +205,7 @@ describe("BridgeHub core flows", function () {
       bridgeHub
         .connect(user)
         .withdraw(
-          user.address,
+          addressToBytes32(user.address),
           await bridgedToken.getAddress(),
           1n,
           SRC_CHAIN_ID

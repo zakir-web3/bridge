@@ -19,8 +19,8 @@ func TestRecoverSignerAddress(t *testing.T) {
 
 	withdraw := &BridgeHubWithdraw{
 		User:        userAddr,
-		Destination: userAddr,
-		Token:       tokenAddr,
+		Destination: AddressToBytes32(userAddr),
+		Token:       AddressToBytes32(tokenAddr),
 		Amount:      big.NewInt(1e18),
 		ChainId:     big.NewInt(97),
 		Nonce:       12345,
@@ -41,9 +41,9 @@ func TestRecoverSignerAddress(t *testing.T) {
 	messageBytes, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
 	require.NoError(t, err)
 	message := common.BytesToHash(messageBytes)
-	require.Equal(t, "0x2d6d11d3b045962a4c69066bfc5511cdb6f608d12fde188b54ef657ab7672573", message.String())
+	require.Equal(t, "0x2486f3baf331176f06d4eda1e971483466ca196931705258bc5ef971b81d4ad2", message.String())
 
-	digest := common.HexToHash("0xd77998b767c9c3e7c538f8fae2cd60480c9965bd8205cf3749bcb1b075e5ec9a")
+	digest := common.HexToHash("0x04f7234d8a5f15bd6cd22589a81bbff694d8b707f81df216635d52a3934a84e8")
 	hash, _, err := apitypes.TypedDataAndHash(typedData)
 	require.NoError(t, err)
 	require.Equal(t, digest, common.BytesToHash(hash))
@@ -53,7 +53,7 @@ func TestRecoverSignerAddress(t *testing.T) {
 		string(message.Bytes()),
 	))))
 
-	sig := common.Hex2Bytes("7573f2ea9d55409b8911b3f1826cae722cc201bf8778d4c3c4829db9cef3807b34368a0e9757596b772f5757afd5ab4d13666b2c45d0682796ac9ad0eb49085b01")
+	sig := common.Hex2Bytes("529011f95cf9db893320030b9b22cd8535f68d4ffabed22a6509b5dfa57669963cf19f6e687d2b3dc808b514debe0d2772ad86853ea82bb94c89db47a4f65eac01")
 	want := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 
 	got, err := RecoverSignerAddress(domainSeparator, message, Signature{

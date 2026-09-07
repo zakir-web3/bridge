@@ -243,7 +243,7 @@ describe("BridgeHub Decimal Conversion", function () {
       bridgeHub
         .connect(user)
         .withdraw(
-          user.address,
+          addressToBytes32(user.address),
           await bridgedToken.getAddress(),
           100_000_000_000_000_000_000n,
           SRC_CHAIN_ID
@@ -253,8 +253,8 @@ describe("BridgeHub Decimal Conversion", function () {
       .withArgs(
         anyValue,
         user.address,
-        user.address,
-        await srcToken.getAddress(),
+        addressToBytes32(user.address),
+        addressToBytes32(await srcToken.getAddress()),
         100_000_000n,
         SRC_CHAIN_ID,
         1n
