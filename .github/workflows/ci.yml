@@ -25,7 +25,10 @@ jobs:
           cache: true
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.5.0
+          # v2.13+ is required for formatters.settings.gofumpt.extra
+          # (group-params / clothe-returns / balance-calls). v2.5.0
+          # only accepts extra-rules and fails `config verify`.
+          version: v2.13.2
           args: --timeout=3m
       - name: Test
         run: make test
