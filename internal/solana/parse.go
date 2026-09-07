@@ -116,6 +116,9 @@ func findDepositInstructionIndex(tx *solana.Transaction, programID solana.Public
 	for i, ix := range tx.Message.Instructions {
 		programKey := accountKeys[ix.ProgramIDIndex]
 		if programKey.Equals(programID) && IsDepositInstruction(ix.Data) {
+			if i < 0 || i > int(^uint32(0)) {
+				return 0, errors.Errorf("instruction index %d out of uint32 range", i)
+			}
 			return uint32(i), nil
 		}
 	}
