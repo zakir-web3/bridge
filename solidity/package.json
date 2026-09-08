@@ -1,7 +1,7 @@
 {
   "name": "solidity-project",
   "version": "1.0.0",
-  "description": "A Solidity project structure",
+  "description": "Bridge & BridgeHub — lock-and-mint cross-chain bridge contracts with EIP-712 validator quorum",
   "main": "index.js",
   "license": "Apache-2.0",
   "engines": {

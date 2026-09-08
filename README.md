@@ -9,7 +9,7 @@ This is for appchain and token-issuer teams who operate their own validators. It
 
 The source-chain `Bridge` contract is adapted from [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol).
 
-[中文文档](README.zh-CN.md) · [Docs](docs/README.md) · [Contributing](CONTRIBUTING.md)
+[中文文档](README.zh-CN.md) · [Docs](docs/README.md) · [AGENTS.md](AGENTS.md) · [Contributing](CONTRIBUTING.md)
 
 ## Overview
 

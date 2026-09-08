@@ -9,7 +9,7 @@
 
 源链 `Bridge` 合约参考自 [Hyperliquid Bridge2.sol](https://github.com/hyperliquid-dex/contracts/blob/audit2/Bridge2.sol)。
 
-[English](README.md) · [文档中心](docs/README.md) · [贡献指南](CONTRIBUTING.md)
+[English](README.md) · [文档中心](docs/README.md) · [AGENTS.md](AGENTS.md) · [贡献指南](CONTRIBUTING.md)
 
 ## 概述
 
