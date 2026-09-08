@@ -9,14 +9,14 @@ import {
 } from "./utils/error-handler";
 
 async function main() {
-  console.log("开始部署 Bridge 合约...");
+  console.log("Deploying Bridge contract...");
 
   const [deployer] = await ethers.getSigners();
-  console.log("部署账户:", deployer.address);
+  console.log("Deployer:", deployer.address);
   const balance = await ethers.provider.getBalance(deployer.address);
-  console.log("账户余额:", ethers.formatEther(balance));
+  console.log("Balance:", ethers.formatEther(balance));
 
-  // 从环境变量读取参数（也支持从命令行读取，优先环境变量）
+  // Read params from env (CLI args also supported; env takes precedence)
   const hotAddresses = (process.env.HOT_ADDRESSES || process.argv[2] || "")
     .split(",")
     .map((s) => s.trim())
@@ -46,27 +46,27 @@ async function main() {
     10
   );
 
-  // 使用统一的验证函数
-  validateAddressArray(hotAddresses, "热验证者");
-  validateAddressArray(coldAddresses, "冷验证者");
+  // Shared validators
+  validateAddressArray(hotAddresses, "hot validator");
+  validateAddressArray(coldAddresses, "cold validator");
   validateArrayLength(
     hotAddresses,
     coldAddresses,
-    "热验证者地址",
-    "冷验证者地址"
+    "hot validator addresses",
+    "cold validator addresses"
   );
-  validateArrayLength(powers, hotAddresses, "权重", "验证者地址");
+  validateArrayLength(powers, hotAddresses, "powers", "validator addresses");
 
-  // 验证数值参数
-  validateNumber(disputePeriodSeconds, "争议期", 1);
-  validateNumber(blockDurationMillis, "区块时长", 100);
-  validateNumber(lockerThreshold, "锁定阈值", 1);
+  // Numeric params
+  validateNumber(disputePeriodSeconds, "dispute period", 1);
+  validateNumber(blockDurationMillis, "block duration", 100);
+  validateNumber(lockerThreshold, "locker threshold", 1);
 
-  // 打印参数预览
-  console.log("\n参数预览:");
+  // Parameter preview
+  console.log("\nParameter preview:");
   for (let i = 0; i < hotAddresses.length; i++) {
     console.log(
-      `  验证者 #${i + 1}: hot=${hotAddresses[i]}, cold=${
+      `  Validator #${i + 1}: hot=${hotAddresses[i]}, cold=${
         coldAddresses[i]
       }, power=${powers[i]}`
     );
@@ -87,23 +87,23 @@ async function main() {
     );
     await bridge.waitForDeployment();
     const bridgeAddress = await bridge.getAddress();
-    console.log("Bridge 部署地址:", bridgeAddress);
+    console.log("Bridge deployed at:", bridgeAddress);
     console.log(`DEPLOYED_ADDRESS=${bridgeAddress}`);
     const domainSeparator = await bridge.domainSeparator();
-    console.log("Bridge 域分隔符:", domainSeparator);
-    console.log("✅ Bridge 部署成功!");
+    console.log("Bridge domain separator:", domainSeparator);
+    console.log("✅ Bridge deployed successfully!");
   } catch (error) {
     throw new DeploymentError(
-      "Bridge 合约部署失败",
+      "Failed to deploy Bridge contract",
       error instanceof Error ? error.message : String(error),
-      "请检查网络连接、账户余额和合约参数，然后重试"
+      "Check network connectivity, account balance, and contract parameters, then retry"
     );
   }
 }
 
 main()
   .then(() => {
-    console.log("🎉 部署完成!");
+    console.log("🎉 Deployment complete!");
     process.exit(0);
   })
   .catch(handleError);

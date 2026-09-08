@@ -13,7 +13,7 @@ function printForgeStorageLayout(contractName: string) {
   const foundryToml = "foundry.toml";
   if (!existsSync(foundryToml)) {
     console.log(
-      "ℹ 未找到 foundry.toml，跳过 forge inspect storage-layout（可用 upgrades-core 校验）"
+      "ℹ foundry.toml not found, skipping forge inspect storage-layout (upgrades-core can still validate)"
     );
     return;
   }
@@ -34,49 +34,49 @@ function printForgeStorageLayout(contractName: string) {
       console.log(`  slot ${row.slot}: ${row.label} (${row.type})`);
     }
     if (rows.length > 12) {
-      console.log(`  ... 另有 ${rows.length - 12} 个 slot`);
+      console.log(`  ... ${rows.length - 12} more slots`);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.log(`⚠ forge inspect 失败: ${message}`);
+    console.log(`⚠ forge inspect failed: ${message}`);
   }
 }
 
 async function main() {
-  console.log("🚀 开始升级 BridgeHub 合约...\n");
+  console.log("🚀 Upgrading BridgeHub contract...\n");
 
   const [signer] = await ethers.getSigners();
-  console.log("操作账户:", signer.address);
+  console.log("Caller:", signer.address);
   const balance = await ethers.provider.getBalance(signer.address);
-  console.log("账户余额:", ethers.formatEther(balance), "ETH\n");
+  console.log("Balance:", ethers.formatEther(balance), "ETH\n");
 
-  // 从环境变量读取参数
+  // Read params from env
   const proxyAddress = process.env.BRIDGE_HUB_PROXY || process.argv[2];
 
   if (!proxyAddress) {
     throw new ConfigurationError(
-      "缺少代理合约地址",
-      "请通过环境变量 BRIDGE_HUB_PROXY 或命令行参数提供",
-      "示例: BRIDGE_HUB_PROXY=0x... npx hardhat run scripts/upgrade-bridge-hub.ts"
+      "Missing proxy address",
+      "Provide BRIDGE_HUB_PROXY via env or CLI argument",
+      "Example: BRIDGE_HUB_PROXY=0x... npx hardhat run scripts/upgrade-bridge-hub.ts"
     );
   }
 
   validateAddress(proxyAddress, "BridgeHub Proxy");
 
   try {
-    // Step 1: 验证当前代理的状态
-    console.log("=== Step 1: 验证当前代理状态 ===");
+    // Step 1: verify current proxy state
+    console.log("=== Step 1: Verify current proxy state ===");
     const BridgeHubV1 = await ethers.getContractFactory("BridgeHub");
     const proxyInstance = BridgeHubV1.attach(proxyAddress) as BridgeHub;
 
-    // 获取当前信息
+    // Current on-chain info
     const currentEpoch = await proxyInstance.epoch();
     const validatorsCount = (await proxyInstance.getHotValidators()).length;
 
-    console.log(`✓ 当前 Epoch: ${currentEpoch}`);
-    console.log(`✓ 验证器数量: ${validatorsCount}`);
+    console.log(`✓ Current epoch: ${currentEpoch}`);
+    console.log(`✓ Validator count: ${validatorsCount}`);
 
-    // 检查是否有足够的权限
+    // Check admin permissions
     const ADMIN_ROLE = await proxyInstance.ADMIN_ROLE();
     const hasAdminRole = await proxyInstance.hasRole(
       ADMIN_ROLE,
@@ -85,52 +85,52 @@ async function main() {
 
     if (!hasAdminRole) {
       throw new PermissionError(
-        "权限不足",
-        `账户 ${signer.address} 没有 ADMIN_ROLE 权限`,
-        "请使用具有管理员权限的账户，或联系合约管理员授予权限"
+        "Insufficient permissions",
+        `Account ${signer.address} does not have ADMIN_ROLE`,
+        "Use an account with admin permissions, or ask the contract admin to grant the role"
       );
     }
-    console.log("✓ 管理员权限验证通过\n");
+    console.log("✓ Admin role verified\n");
 
-    // Step 2: 编译新版本合约
-    console.log("=== Step 2: 编译新版本合约 ===");
-    console.log("正在编译 BridgeHub V2...");
-    // 合约已编译，直接获取
+    // Step 2: compile new implementation
+    console.log("=== Step 2: Compile new implementation ===");
+    console.log("Compiling BridgeHub V2...");
+    // Contract is already compiled; get the factory
     const BridgeHubV2 = await ethers.getContractFactory("BridgeHub");
-    console.log("✓ BridgeHub V2 已准备就绪\n");
+    console.log("✓ BridgeHub V2 is ready\n");
 
-    // Step 2.5: Storage layout 校验
-    console.log("=== Step 2.5: Storage layout 校验 ===");
+    // Step 2.5: storage layout check
+    console.log("=== Step 2.5: Storage layout check ===");
     printForgeStorageLayout("BridgeHub");
     try {
       await upgrades.validateUpgrade(proxyAddress, BridgeHubV2, {
         kind: "uups",
       });
-      console.log("✓ @openzeppelin/upgrades-core: storage layout 兼容\n");
+      console.log("✓ @openzeppelin/upgrades-core: storage layout compatible\n");
     } catch (error) {
-      console.error("✗ Storage layout 不兼容，已中止升级");
+      console.error("✗ Storage layout incompatible, aborting upgrade");
       if (error instanceof Error) {
         console.error(error.message);
       } else {
         console.error(String(error));
       }
       throw new PermissionError(
-        "Storage layout 校验失败",
-        "新实现与链上代理的 storage layout 不兼容",
-        "请修复 layout 冲突后再升级，或部署新代理而非原地升级"
+        "Storage layout check failed",
+        "The new implementation is incompatible with the on-chain proxy storage layout",
+        "Fix the layout conflict before upgrading, or deploy a new proxy instead of in-place upgrade"
       );
     }
 
-    // Step 3: 执行升级
-    console.log("=== Step 3: 执行 UUPS 升级 ===");
-    console.log(`代理地址: ${proxyAddress}`);
-    console.log("正在部署新实现合约...");
+    // Step 3: perform upgrade
+    console.log("=== Step 3: Perform UUPS upgrade ===");
+    console.log(`Proxy address: ${proxyAddress}`);
+    console.log("Deploying new implementation...");
 
     const deployedImpl = await upgrades.upgradeProxy(
       proxyAddress,
       BridgeHubV2,
       {
-        // 不初始化，因为代理已经初始化过
+        // Skip initializer: the proxy is already initialized
         unsafeSkipStorageCheck: false,
         kind: "uups",
       }
@@ -142,55 +142,55 @@ async function main() {
       "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
     );
 
-    console.log("✓ 新实现合约已部署");
-    console.log(`✓ 实现地址: 0x${implAddress.slice(-40)}\n`);
+    console.log("✓ New implementation deployed");
+    console.log(`✓ Implementation address: 0x${implAddress.slice(-40)}\n`);
 
-    // Step 4: 验证升级
-    console.log("=== Step 4: 验证升级结果 ===");
+    // Step 4: verify upgrade
+    console.log("=== Step 4: Verify upgrade ===");
     const upgradedInstance = BridgeHubV2.attach(proxyAddress) as BridgeHub;
 
-    // 验证数据完整性
+    // Verify data integrity
     const newEpoch = await upgradedInstance.epoch();
     const newValidatorsCount = (await upgradedInstance.getHotValidators())
       .length;
 
-    console.log(`✓ Epoch 保持一致: ${newEpoch === currentEpoch}`);
+    console.log(`✓ Epoch unchanged: ${newEpoch === currentEpoch}`);
     console.log(
-      `✓ 验证器数据保持一致: ${newValidatorsCount === validatorsCount}`
+      `✓ Validator data unchanged: ${newValidatorsCount === validatorsCount}`
     );
 
-    // 验证新增的映射存在
+    // Verify new mapping exists
     try {
-      // 测试新增的 tokenDecimalDiff 映射
+      // Probe the new tokenDecimalDiff mapping
       const testDiff = await upgradedInstance.tokenDecimalDiff(
         1,
         ethers.zeroPadValue(signer.address, 32)
       );
-      console.log(`✓ 新增的 tokenDecimalDiff mapping 可以访问`);
+      console.log(`✓ New tokenDecimalDiff mapping is accessible`);
     } catch (e) {
-      console.log(`⚠ 无法验证 tokenDecimalDiff，但这可能是正常的`);
+      console.log(`⚠ Could not verify tokenDecimalDiff, which may be expected`);
     }
 
-    console.log("\n✅ 升级成功!\n");
+    console.log("\n✅ Upgrade succeeded!\n");
 
-    // Step 5: 打印总结
-    console.log("=== 升级总结 ===");
-    console.log(`代理地址:     ${proxyAddress}`);
-    console.log(`新实现地址:   0x${implAddress.slice(-40)}`);
-    console.log(`升级账户:     ${signer.address}`);
-    console.log(`\n新增功能:`);
-    console.log(`  • setTokenPair 方法新增 tokenDecimal 参数`);
-    console.log(`  • 自动验证 dstToken 是否为有效 ERC20`);
-    console.log(`  • 自动计算并存储精度差值`);
-    console.log(`  • deposit/withdraw 时自动进行精度转换`);
-    console.log(`\n下一步操作:`);
+    // Step 5: print summary
+    console.log("=== Upgrade summary ===");
+    console.log(`Proxy address:            ${proxyAddress}`);
+    console.log(`New implementation:       0x${implAddress.slice(-40)}`);
+    console.log(`Upgrade account:          ${signer.address}`);
+    console.log(`\nNew features:`);
+    console.log(`  • setTokenPair now takes a tokenDecimal argument`);
+    console.log(`  • Automatically verifies dstToken is a valid ERC20`);
+    console.log(`  • Automatically computes and stores the decimal diff`);
+    console.log(`  • deposit/withdraw automatically convert decimals`);
+    console.log(`\nNext steps:`);
     console.log(
-      `  1. 使用新的 setTokenPair 方法配置 token pair，传入 tokenDecimal 参数`
+      `  1. Configure token pairs with the new setTokenPair method, passing tokenDecimal`
     );
     console.log(
-      `     示例: npx hardhat run scripts/set-token-pair.ts --network <network>`
+      `     Example: npx hardhat run scripts/set-token-pair.ts --network <network>`
     );
-    console.log(`  2. 参考 DECIMAL_CONVERSION.md 了解精度处理的详细信息`);
+    console.log(`  2. See DECIMAL_CONVERSION.md for decimal handling details`);
   } catch (error) {
     if (
       error instanceof ConfigurationError ||
@@ -199,16 +199,16 @@ async function main() {
       throw error;
     }
     throw new PermissionError(
-      "升级 BridgeHub 失败",
+      "Failed to upgrade BridgeHub",
       error instanceof Error ? error.message : String(error),
-      "请检查网络连接、合约状态和权限，然后重试"
+      "Check network connectivity, contract state, and permissions, then retry"
     );
   }
 }
 
 main()
   .then(() => {
-    console.log("🎉 BridgeHub 升级完成！\n");
+    console.log("🎉 BridgeHub upgrade complete!\n");
     process.exit(0);
   })
   .catch(handleError);

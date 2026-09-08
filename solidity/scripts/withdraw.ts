@@ -3,12 +3,12 @@ import { BridgeHub } from "../typechain-types";
 import { sendTx } from "./utils/send-tx";
 
 async function main() {
-  console.log("🚀 开始执行 BridgeHub Withdraw 操作...");
+  console.log("🚀 Starting BridgeHub withdraw...");
   const [signer] = await ethers.getSigners();
-  console.log(`👤 签名者地址: ${signer.address}`);
+  console.log(`👤 Signer: ${signer.address}`);
 
   const balance = await ethers.provider.getBalance(signer.address);
-  console.log(`💰 账户原生代币余额: ${ethers.formatEther(balance)}`);
+  console.log(`💰 Native token balance: ${ethers.formatEther(balance)}`);
 
   const BRIDGE_HUB_CONTRACT_ADDRESS = process.env.BRIDGE_HUB_CONTRACT_ADDRESS;
   const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
@@ -17,24 +17,24 @@ async function main() {
   const CHAIN_ID = process.env.TOKEN_CHAIN_ID || process.env.CHAIN_ID || "56";
 
   if (!BRIDGE_HUB_CONTRACT_ADDRESS) {
-    throw new Error("请设置环境变量 BRIDGE_HUB_CONTRACT_ADDRESS");
+    throw new Error("Set environment variable BRIDGE_HUB_CONTRACT_ADDRESS");
   }
   if (!TOKEN_ADDRESS) {
-    throw new Error("请设置环境变量 TOKEN_ADDRESS");
+    throw new Error("Set environment variable TOKEN_ADDRESS");
   }
   if (!DESTINATION_ADDRESS) {
-    throw new Error("请设置环境变量 DESTINATION_ADDRESS");
+    throw new Error("Set environment variable DESTINATION_ADDRESS");
   }
 
   const amount = BigInt(AMOUNT);
   const chainId = BigInt(CHAIN_ID);
 
-  console.log("📋 配置信息:");
-  console.log(`   BridgeHub 合约地址: ${BRIDGE_HUB_CONTRACT_ADDRESS}`);
-  console.log(`   代币地址: ${TOKEN_ADDRESS}`);
-  console.log(`   目标地址: ${DESTINATION_ADDRESS}`);
-  console.log(`   提款金额: ${amount.toString()} wei`);
-  console.log(`   目标链 ID: ${chainId.toString()}`);
+  console.log("📋 Config:");
+  console.log(`   BridgeHub contract: ${BRIDGE_HUB_CONTRACT_ADDRESS}`);
+  console.log(`   Token address: ${TOKEN_ADDRESS}`);
+  console.log(`   Destination: ${DESTINATION_ADDRESS}`);
+  console.log(`   Withdraw amount: ${amount.toString()} wei`);
+  console.log(`   Destination chain ID: ${chainId.toString()}`);
 
   const bridgeHub = (await ethers.getContractAt(
     "BridgeHub",
@@ -44,19 +44,19 @@ async function main() {
   const token = await ethers.getContractAt("IERC20", TOKEN_ADDRESS, signer);
 
   const tokenBalance = await token.balanceOf(signer.address);
-  console.log(`🪙 代币余额: ${tokenBalance} wei`);
+  console.log(`🪙 Token balance: ${tokenBalance} wei`);
 
   const allowance = await token.allowance(
     signer.address,
     BRIDGE_HUB_CONTRACT_ADDRESS
   );
-  console.log(`🔐 当前授权额度: ${allowance} wei`);
+  console.log(`🔐 Current allowance: ${allowance} wei`);
 
   const withdrawFee = await bridgeHub.tokenWithdrawFee(TOKEN_ADDRESS);
-  console.log(`💸 提款费用: ${withdrawFee} wei`);
+  console.log(`💸 Withdraw fee: ${withdrawFee} wei`);
   if (amount <= withdrawFee) {
     throw new Error(
-      `提款金额 ${amount.toString()} wei 必须大于提款费用 ${withdrawFee.toString()} wei`
+      `Withdraw amount ${amount.toString()} wei must be greater than the withdraw fee ${withdrawFee.toString()} wei`
     );
   }
 
@@ -66,21 +66,21 @@ async function main() {
   );
   if (bridgeTokenBytes32 === ethers.ZeroHash) {
     throw new Error(
-      `链 ID ${chainId.toString()} 上的代币 ${TOKEN_ADDRESS} 未配置代币对`
+      `Token ${TOKEN_ADDRESS} on chain ID ${chainId.toString()} has no token pair configured`
     );
   }
   const bridgeToken = ethers.getAddress("0x" + bridgeTokenBytes32.slice(26));
-  console.log(`🔗 桥接代币地址: ${bridgeToken}`);
+  console.log(`🔗 Bridged token address: ${bridgeToken}`);
 
   if (allowance < amount) {
-    console.log("⚠️  授权额度不足，开始授权...");
+    console.log("⚠️  Allowance too low, approving...");
     const approveReceipt = await sendTx(signer, (nonce) =>
       token.approve(BRIDGE_HUB_CONTRACT_ADDRESS, ethers.MaxUint256, { nonce })
     );
-    console.log(`✅ 授权成功，区块号: ${approveReceipt.blockNumber}`);
+    console.log(`✅ Approved, block: ${approveReceipt.blockNumber}`);
   }
 
-  console.log("💸 开始执行 withdraw 操作...");
+  console.log("💸 Submitting withdraw...");
   const withdrawReceipt = await sendTx(signer, (nonce) =>
     bridgeHub.withdraw(
       ethers.zeroPadValue(DESTINATION_ADDRESS, 32),
@@ -90,18 +90,18 @@ async function main() {
       { nonce }
     )
   );
-  console.log(`✅ Withdraw 成功！`);
-  console.log(`   区块号: ${withdrawReceipt.blockNumber}`);
-  console.log(`   Gas 使用量: ${withdrawReceipt.gasUsed.toString()}`);
+  console.log(`✅ Withdraw succeeded!`);
+  console.log(`   Block: ${withdrawReceipt.blockNumber}`);
+  console.log(`   Gas used: ${withdrawReceipt.gasUsed.toString()}`);
 
   const currentWithdrawNonce = await bridgeHub.withdrawNonce();
-  console.log(`🔢 当前提款 Nonce: ${currentWithdrawNonce}`);
-  console.log("🎉 BridgeHub Withdraw 操作完成！");
-  console.log("📝 注意: 提款请求已提交，需要等待验证者确认后才能完成跨链转账");
+  console.log(`🔢 Current withdraw nonce: ${currentWithdrawNonce}`);
+  console.log("🎉 BridgeHub withdraw complete!");
+  console.log("📝 Note: the withdraw request is submitted; wait for validator confirmation to complete the cross-chain transfer");
 }
 
 main().catch((error) => {
-  console.error("💥 脚本执行失败:");
+  console.error("💥 Script failed:");
   console.error(error);
   process.exit(1);
 });

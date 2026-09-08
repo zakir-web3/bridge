@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-// 错误类型枚举
+// Error type enum
 export enum ErrorType {
   VALIDATION_ERROR = "VALIDATION_ERROR",
   DEPLOYMENT_ERROR = "DEPLOYMENT_ERROR",
@@ -8,7 +8,7 @@ export enum ErrorType {
   PERMISSION_ERROR = "PERMISSION_ERROR",
 }
 
-// 错误信息接口
+// Error info interface
 export interface ErrorInfo {
   type: ErrorType;
   message: string;
@@ -16,7 +16,7 @@ export interface ErrorInfo {
   suggestion?: string;
 }
 
-// 统一错误类
+// Unified error class
 export class BridgeError extends Error {
   public readonly type: ErrorType;
   public readonly details?: string;
@@ -31,7 +31,7 @@ export class BridgeError extends Error {
   }
 }
 
-// 验证相关错误
+// Validation errors
 export class ValidationError extends BridgeError {
   constructor(message: string, details?: string, suggestion?: string) {
     super({
@@ -43,7 +43,7 @@ export class ValidationError extends BridgeError {
   }
 }
 
-// 部署相关错误
+// Deployment errors
 export class DeploymentError extends BridgeError {
   constructor(message: string, details?: string, suggestion?: string) {
     super({
@@ -55,7 +55,7 @@ export class DeploymentError extends BridgeError {
   }
 }
 
-// 配置相关错误
+// Configuration errors
 export class ConfigurationError extends BridgeError {
   constructor(message: string, details?: string, suggestion?: string) {
     super({
@@ -67,7 +67,7 @@ export class ConfigurationError extends BridgeError {
   }
 }
 
-// 权限相关错误
+// Permission errors
 export class PermissionError extends BridgeError {
   constructor(message: string, details?: string, suggestion?: string) {
     super({
@@ -79,39 +79,39 @@ export class PermissionError extends BridgeError {
   }
 }
 
-// 验证地址格式
+// Validate address format
 export function validateAddress(address: string, name: string): void {
   if (!address || !ethers.isAddress(address)) {
     throw new ValidationError(
-      `无效的${name}地址`,
-      `地址: ${address}`,
-      `请提供有效的以太坊地址格式`
+      `Invalid ${name} address`,
+      `Address: ${address}`,
+      `Please provide a valid Ethereum address`
     );
   }
 }
 
-// 验证地址数组
+// Validate address array
 export function validateAddressArray(addresses: string[], name: string): void {
   if (!addresses || addresses.length === 0) {
     throw new ValidationError(
-      `缺少${name}地址`,
-      `地址数量: ${addresses?.length || 0}`,
-      `请通过环境变量或命令行参数提供${name}地址`
+      `Missing ${name} address`,
+      `Address count: ${addresses?.length || 0}`,
+      `Please provide ${name} address via env var or CLI argument`
     );
   }
 
   for (let i = 0; i < addresses.length; i++) {
     if (!ethers.isAddress(addresses[i])) {
       throw new ValidationError(
-        `无效的${name}地址`,
-        `索引 ${i}: ${addresses[i]}`,
-        `请检查第${i + 1}个地址格式`
+        `Invalid ${name} address`,
+        `Index ${i}: ${addresses[i]}`,
+        `Please check address #${i + 1} format`
       );
     }
   }
 }
 
-// 验证数组长度匹配
+// Validate matching array lengths
 export function validateArrayLength(
   array1: any[],
   array2: any[],
@@ -120,14 +120,14 @@ export function validateArrayLength(
 ): void {
   if (array1.length !== array2.length) {
     throw new ValidationError(
-      `${name1}和${name2}数量不匹配`,
-      `${name1}数量: ${array1.length}, ${name2}数量: ${array2.length}`,
-      `请确保${name1}和${name2}的数量一致`
+      `${name1} and ${name2} count mismatch`,
+      `${name1} count: ${array1.length}, ${name2} count: ${array2.length}`,
+      `Please ensure ${name1} and ${name2} have the same length`
     );
   }
 }
 
-// 验证数值参数
+// Validate numeric parameter
 export function validateNumber(
   value: number,
   name: string,
@@ -136,40 +136,40 @@ export function validateNumber(
 ): void {
   if (isNaN(value) || !isFinite(value)) {
     throw new ValidationError(
-      `无效的${name}值`,
-      `值: ${value}`,
-      `请提供有效的数值`
+      `Invalid ${name} value`,
+      `Value: ${value}`,
+      `Please provide a valid number`
     );
   }
 
   if (min !== undefined && value < min) {
     throw new ValidationError(
-      `${name}值过小`,
-      `当前值: ${value}, 最小值: ${min}`,
-      `请确保${name}不小于${min}`
+      `${name} value too small`,
+      `Current: ${value}, minimum: ${min}`,
+      `Please ensure ${name} is not less than ${min}`
     );
   }
 
   if (max !== undefined && value > max) {
     throw new ValidationError(
-      `${name}值过大`,
-      `当前值: ${value}, 最大值: ${max}`,
-      `请确保${name}不大于${max}`
+      `${name} value too large`,
+      `Current: ${value}, maximum: ${max}`,
+      `Please ensure ${name} is not greater than ${max}`
     );
   }
 }
 
-// 格式化错误信息
+// Format error message
 export function formatError(error: any): string {
   if (error instanceof BridgeError) {
     let formatted = `[${error.type}] ${error.message}`;
 
     if (error.details) {
-      formatted += `\n详细信息: ${error.details}`;
+      formatted += `\nDetails: ${error.details}`;
     }
 
     if (error.suggestion) {
-      formatted += `\n建议: ${error.suggestion}`;
+      formatted += `\nSuggestion: ${error.suggestion}`;
     }
 
     return formatted;
@@ -178,16 +178,16 @@ export function formatError(error: any): string {
   return error.message || error.toString();
 }
 
-// 统一错误处理
+// Unified error handling
 export function handleError(error: any): never {
   const formattedError = formatError(error);
-  console.error("❌ 操作失败:");
+  console.error("❌ Operation failed:");
   console.error(formattedError);
 
   if (error instanceof BridgeError) {
     process.exit(1);
   } else {
-    console.error("未知错误类型，请检查日志");
+    console.error("Unknown error type, please check the logs");
     process.exit(1);
   }
 }
