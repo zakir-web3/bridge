@@ -71,7 +71,7 @@ Deploy `Bridge` on the source chain and `BridgeHub` on the destination chain. Se
 Copy the template and fill in your values:
 
 ```bash
-cp .config.toml config.toml
+cp config.example.toml config.toml
 ```
 
 Key settings:
@@ -104,7 +104,7 @@ The service starts two block scanners (one per chain) and optionally a withdrawa
 
 ## Configuration Reference
 
-`config.toml` controls logging, caching, network endpoints, contract addresses, scan intervals, block confirmation depth, and transaction gas parameters. See [.config.toml](.config.toml) for a fully annotated template.
+`config.toml` controls logging, caching, network endpoints, contract addresses, scan intervals, block confirmation depth, and transaction gas parameters. See [config.example.toml](config.example.toml) for a fully annotated template.
 
 Notable options:
 
@@ -121,7 +121,7 @@ bridge/
 ├── main.go                 # CLI entry point
 ├── server.go               # Service orchestration
 ├── config.go               # Configuration types
-├── .config.toml            # Configuration template
+├── config.example.toml     # Configuration template
 ├── docs/                   # Operator and wallet guides
 ├── internal/
 │   ├── bridge/             # Source-chain logic

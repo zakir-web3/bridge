@@ -1,0 +1,158 @@
+# Log level: debug, info, warn, error
+log_level = "debug"
+# Log format: console or json
+log_format= "console"
+
+# Cache configuration
+# Database file path for persisting block/slot checkpoints
+source = "./tmp/bridge.db"
+
+# Validator private key used to sign transactions; replace with your actual key
+priv_key = "your_private_key_here"
+
+# BridgeHub (destination chain) configuration
+[bridge_hub]
+# RPC URL for the chain where BridgeHub is deployed
+node_url = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+# Chain ID of the network where BridgeHub is deployed
+chain_id = "1337"
+# Maximum number of retries when a request fails
+max_retries = 5
+# Base delay between retries
+base_delay = "100ms"
+# Maximum delay between retries
+max_delay = "5s"
+# Backoff multiplier applied on each retry
+backoff_rate = 2.0
+# Interval between block scans
+interval = "3s"
+# Starting block height; set to the contract deployment block
+start_block = 0
+# Number of blocks processed per scan
+block_interval = 100
+# Block confirmation depth before processing
+block_delay = 6
+# When true, clears the cached block height and rescans from start_block
+clear_cache = false
+# Deployed BridgeHub contract address
+bridge_hub_address = "0x1234567890123456789012345678901234567890"
+# Number of historical blocks used for gas fee estimation
+fee_history_block_count = 10
+# Reward percentiles used for gas fee estimation
+fee_history_reward_percentiles = [50.0, 65.0, 80.0]
+# Maximum priority fee (tip) cap
+max_gas_tip_cap = "1000000000"  # 1 Gwei
+# Maximum total gas fee cap
+max_gas_fee_cap = "5000000000"  # 5 Gwei
+# Percentage increase applied to the estimated gas fee
+increase_percentile = "120"
+# Maximum gas limit per transaction
+max_gas_limit = 5000000
+# When true, simulate transactions only; do not broadcast
+no_send = false
+# Minimum priority fee (tip) for transactions
+gas_tip_cap="1000000000"
+# Minimum total gas fee for transactions
+gas_fee_cap="1000000000"
+
+# Bridge (EVM source chain) configuration; leave bridge_address empty for Solana→EVM only
+[bridge]
+# RPC URL for the EVM source chain
+node_url = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+# Chain ID of the EVM source chain
+chain_id = "97"
+# Maximum number of retries when a request fails
+max_retries = 5
+# Base delay between retries
+base_delay = "100ms"
+# Maximum delay between retries
+max_delay = "5s"
+# Backoff multiplier applied on each retry
+backoff_rate = 2.0
+# Interval between block scans
+interval = "6s"
+# Starting block height; set to the contract deployment block
+start_block = 0
+# Number of blocks processed per scan
+block_interval = 100
+# Block confirmation depth before processing
+block_delay = 12
+# When true, clears the cached block height and rescans from start_block
+clear_cache = false
+# Bridge contract address; leave empty to disable the EVM source-chain scanner
+bridge_address = ""
+# ERC-20 token addresses to monitor on the EVM source chain; leave empty for Solana-only setups
+bridge_tokens = []
+# Number of historical blocks used for gas fee estimation
+fee_history_block_count = 10
+# Reward percentiles used for gas fee estimation
+fee_history_reward_percentiles = [50.0, 65.0, 80.0]
+# Maximum priority fee (tip) cap
+max_gas_tip_cap = "1000000000"  # 1 Gwei
+# Maximum total gas fee cap
+max_gas_fee_cap = "5000000000"  # 5 Gwei
+# Percentage increase applied to the estimated gas fee
+increase_percentile = "120"
+# Maximum gas limit per transaction
+max_gas_limit = 500000
+# When true, simulate transactions only; do not broadcast
+no_send = false
+# Minimum priority fee (tip) for transactions
+gas_tip_cap="120000000" # 0.12 Gwei
+# Minimum total gas fee for transactions
+gas_fee_cap="1200000000" # 0.12 Gwei
+# When true, broadcast finalize-withdrawals transactions; only one validator needs this enabled
+send_finalize_withdrawals = true
+# Interval between finalize-withdrawals runs
+finalize_withdrawals_interval="30s"
+# Maximum withdraw amount per batch, in token base units (e.g. 1e-18 for 18-decimal tokens)
+max_withdraw_amount = "100000000000000000000" # 100
+# Gas limit for withdraw request transactions; 0 uses the default
+request_withdraw_gas_limit = 0
+# When true, enable processing withdraw requests on the source chain
+enable_request_withdraw = true
+
+# Solana source-chain configuration (Solana → EVM deposits)
+[solana]
+# Solana RPC URL
+node_url = "https://api.devnet.solana.com"
+# Solana chain ID (written to EIP-712 Deposit.chainId; 900001 is a devnet example)
+chain_id = "900001"
+# Anchor bridge program ID to scan for deposit transactions
+program_id = "C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq"
+# Whitelist of SPL mints to monitor; deposits for other mints are ignored
+bridge_mints = [
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+]
+
+# RPC retry settings (shared with EVM sections)
+# Maximum number of retries when an RPC request fails
+max_retries = 5
+# Base delay between retries
+base_delay = "100ms"
+# Maximum delay between retries
+max_delay = "5s"
+# Backoff multiplier applied on each retry
+backoff_rate = 2.0
+
+# Slot scanner settings
+# Interval between scan cycles
+interval = "3s"
+# Starting slot when no checkpoint exists; set to the program deployment slot
+start_slot = 0
+# Maximum number of slots processed per scan cycle
+slot_interval = 1000
+# Slot confirmation depth; scans only up to (current_slot - slot_delay)
+slot_delay = 32
+# Extra slots to look back before start_slot when fetching signatures (handles reordering)
+slot_lookback = 64
+# Re-scan the last N slots each cycle to catch signatures missed in prior runs
+rescan_slots = 128
+# Page size for getSignaturesForAddress pagination
+signatures_page_limit = 1000
+# Retries when fetching an individual transaction by signature
+tx_fetch_retries = 5
+# RPC commitment level: finalized, confirmed, or processed (default: finalized)
+commitment = "finalized"
+# When true, clears slot/checkpoint cache and exits; set back to false before restarting
+clear_cache = false

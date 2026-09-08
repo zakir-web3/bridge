@@ -17,7 +17,7 @@ First public release of the self-hosted EVM lock-and-mint bridge.
 - **ABI pipeline** — `compile_abi.sh` to generate Go bindings from Solidity ABIs
 - **Tests** — Go unit tests and Hardhat contract tests (decimal conversion, deposit/withdraw flows)
 - **CI** — GitHub Actions workflow for Go and Solidity on every push and pull request
-- **Documentation** — README (English and Chinese), contributing guide, security policy, and operator configuration template (`.config.toml`)
+- **Documentation** — README (English and Chinese), contributing guide, security policy, and operator configuration template (`config.example.toml`)
 
 ### Notes
 

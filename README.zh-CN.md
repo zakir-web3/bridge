@@ -71,7 +71,7 @@ make build
 复制配置模板并填入实际值：
 
 ```bash
-cp .config.toml config.toml
+cp config.example.toml config.toml
 ```
 
 主要配置项：
@@ -104,7 +104,7 @@ cp .config.toml config.toml
 
 ## 配置说明
 
-`config.toml` 控制日志、缓存、网络端点、合约地址、扫描间隔、区块确认深度和交易 gas 参数。完整注释模板见 [.config.toml](.config.toml)。
+`config.toml` 控制日志、缓存、网络端点、合约地址、扫描间隔、区块确认深度和交易 gas 参数。完整注释模板见 [config.example.toml](config.example.toml)。
 
 常用选项：
 
@@ -121,7 +121,7 @@ bridge/
 ├── main.go                 # CLI 入口
 ├── server.go               # 服务编排
 ├── config.go               # 配置类型定义
-├── .config.toml            # 配置模板
+├── config.example.toml     # 配置模板
 ├── docs/                   # 运维与钱包集成指南
 ├── internal/
 │   ├── bridge/             # 源链逻辑

@@ -31,7 +31,7 @@ npm test
 
 - **Do** edit `solidity/contracts/` and the handwritten wrappers in `internal/contract/{bridge,bridge_hub,bridge_erc20}.go` together when you change ABI or EIP-712 types. After an ABI change, run `./compile_abi.sh` from the repo root, then keep those wrappers in sync with the Solidity domain / typehash. Changing only one side will break cross-chain signature verification.
 - **Do not** hand-edit generated files `internal/contract/*.sol.go`. They are produced by `./compile_abi.sh`.
-- **Do not** commit `config.toml`, `.env`, private keys, or RPC secrets. Copy `.config.toml` locally. Never log `priv_key`.
+- **Do not** commit `config.toml`, `.env`, private keys, or RPC secrets. Copy `config.example.toml` locally. Never log `priv_key`.
 - **Do not** swap Bridge / BridgeHub roles, chain IDs, or token addresses.
 - **Do not** bypass the existing scanner, scheduler, or cache with a second scan or persistence path.
 
