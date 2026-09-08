@@ -27,7 +27,7 @@ type BridgeHub struct {
 	cfg             Config
 	contract        *contract.BridgeHub
 	validatorSet    *contract.ValidatorSet
-	bc              BridgeContract
+	bridges         map[uint64]BridgeContract
 	domainSeparator common.Hash
 }
 
@@ -76,6 +76,7 @@ func NewBridgeHub(ctx context.Context, cfg Config) (*BridgeHub, error) {
 		cfg:             cfg,
 		contract:        c,
 		validatorSet:    validatorSet,
+		bridges:         make(map[uint64]BridgeContract),
 		domainSeparator: domainSeparator,
 	}, nil
 }
@@ -84,8 +85,9 @@ func (b *BridgeHub) GetValidatorSet() *contract.ValidatorSet {
 	return b.validatorSet
 }
 
-func (b *BridgeHub) SetBridgeContract(bc BridgeContract) {
-	b.bc = bc
+// RegisterBridgeContract registers a source-chain handler for withdraw routing.
+func (b *BridgeHub) RegisterBridgeContract(chainID uint64, bc BridgeContract) {
+	b.bridges[chainID] = bc
 }
 
 func (b *BridgeHub) DepositConfirmSolana(ctx context.Context, srcChainID *big.Int, deposits ...*contract.SolanaDeposit) error {

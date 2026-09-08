@@ -32,6 +32,11 @@ func Start(cfg *Config) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := badgerCache.Close(); err != nil {
+			log.Error().Err(err).Msg("failed to close cache")
+		}
+	}()
 
 	bridgeHubInstance, err := bridgehub.NewBridgeHub(ctx, cfg.BridgeHub)
 	if err != nil {
@@ -57,7 +62,7 @@ func Start(cfg *Config) error {
 		if err != nil {
 			return err
 		}
-		bridgeHubInstance.SetBridgeContract(bridgeInstance)
+		bridgeHubInstance.RegisterBridgeContract(bridgeInstance.GetChainID().Uint64(), bridgeInstance)
 
 		bridgeScanner := scanner.NewScanner(cfg.Bridge.Config, badgerCache, bridgeInstance)
 		SafeGo("bridge-scanner", func() error {

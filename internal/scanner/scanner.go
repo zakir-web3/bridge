@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -40,6 +41,7 @@ type Scanner struct {
 	cli       *ethclient.Client
 	cache     Cache
 	processor EventProcessor
+	metrics   *ScannerMetrics
 }
 
 func NewScanner(cfg Config, cache Cache, processor EventProcessor) *Scanner {
@@ -54,11 +56,22 @@ func NewScanner(cfg Config, cache Cache, processor EventProcessor) *Scanner {
 		cli:       processor.GetClient(),
 		cache:     cache,
 		processor: processor,
+		metrics:   &ScannerMetrics{},
 	}
+}
+
+// Metrics returns current scanner counters.
+func (s *Scanner) Metrics() *ScannerMetrics {
+	return s.metrics
 }
 
 // ScanBlockRange scans a range of blocks for events
 func (s *Scanner) ScanBlockRange(ctx context.Context) error {
+	started := time.Now()
+	defer func() {
+		s.metrics.RecordScanDuration(time.Since(started))
+	}()
+
 	if s.cfg.ClearCache {
 		s.logger.Info().Msg("Clearing last scanned block cache")
 		if err := s.cache.SetLastScannedBlock(s.chainID.Uint64(), 0); err != nil {
@@ -113,9 +126,11 @@ func (s *Scanner) ScanBlockRange(ctx context.Context) error {
 	}
 
 	s.logger.Info().
+		Uint64("chainID", s.chainID.Uint64()).
 		Uint64("startBlock", startBlock).
 		Uint64("endBlock", endBlock).
 		Uint64("currentBlock", currentBlock).
+		Uint64("backlogBlocks", endBlock-startBlock).
 		Msg("Scanning block range")
 
 	// Scan the blocks
@@ -132,9 +147,11 @@ func (s *Scanner) ScanBlockRange(ctx context.Context) error {
 		return errors.Wrap(err, "set last scanned block")
 	}
 
-	s.logger.Debug().
+	s.logger.Info().
+		Uint64("chainID", s.chainID.Uint64()).
 		Uint64("lastScannedBlock", endBlock).
-		Msg("Block range scanned successfully")
+		Interface("metrics", s.metrics.Snapshot()).
+		Msg("Block range scan completed")
 
 	return nil
 }
@@ -152,15 +169,18 @@ func (s *Scanner) filterBlock(ctx context.Context, startBlock, endBlock uint64) 
 		}
 		logs = append(logs, ls...)
 	}
+	s.metrics.LogsFetched.Add(uint64(len(logs)))
 
 	// Process each log event
 	for _, l := range logs {
 		if err := s.processor.ProcessLog(ctx, l); err != nil {
+			s.metrics.LogsFailed.Add(1)
 			s.logger.Error().Err(err).
 				Uint64("blockNumber", l.BlockNumber).
 				Msg("Failed to process log")
 			return err
 		}
+		s.metrics.LogsProcessed.Add(1)
 	}
 	return nil
 }

@@ -30,8 +30,19 @@ func (b *BridgeHub) ProcessLog(ctx context.Context, log types.Log) error {
 		if err != nil {
 			return errors.Wrap(err, "parse withdraw event")
 		}
-		if err = b.bc.Withdraw(ctx, b.GetChainID(), withdrawEvent); err != nil {
-			return errors.Wrap(err, "handle withdraw confirm")
+		if withdrawEvent.ChainId == nil {
+			return errors.New("withdraw event missing chainId")
+		}
+		bc, ok := b.bridges[withdrawEvent.ChainId.Uint64()]
+		if !ok {
+			b.logger.Warn().
+				Uint64("chainId", withdrawEvent.ChainId.Uint64()).
+				Uint64("nonce", withdrawEvent.Nonce).
+				Msg("no bridge handler registered for withdraw chain, skipping")
+			return nil
+		}
+		if err = bc.Withdraw(ctx, withdrawEvent.ChainId, withdrawEvent); err != nil {
+			return errors.Wrap(err, "handle withdraw")
 		}
 		return nil
 	case common.HexToHash(BridgeSignatureSubmittedEventHash):
@@ -55,8 +66,16 @@ func (b *BridgeHub) ProcessLog(ctx context.Context, log types.Log) error {
 		if err != nil {
 			return err
 		}
-		if err = b.bc.BridgeSignatureSubmitted(ctx, b.GetChainID(), signs); err != nil {
-			return errors.Wrap(err, "handle bridge signature submitted")
+		if len(b.bridges) == 0 {
+			b.logger.Warn().
+				Hex("messageHash", signatureSubmittedEvent.Message[:]).
+				Msg("no bridge handler registered, skipping bridge signature submitted")
+			return nil
+		}
+		for chainID, bc := range b.bridges {
+			if err = bc.BridgeSignatureSubmitted(ctx, b.GetChainID(), signs); err != nil {
+				return errors.Wrapf(err, "handle bridge signature submitted for chain %d", chainID)
+			}
 		}
 		return nil
 	default:

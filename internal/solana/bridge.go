@@ -9,18 +9,23 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/zakir-web3/bridge/internal/bridgehub"
+	"github.com/zakir-web3/bridge/internal/contract"
 )
+
+// DepositConfirmer submits Solana deposit confirmations to the target chain hub.
+type DepositConfirmer interface {
+	DepositConfirmSolana(ctx context.Context, srcChainID *big.Int, deposits ...*contract.SolanaDeposit) error
+}
 
 type Bridge struct {
 	logger  zerolog.Logger
 	cfg     Config
 	client  *Client
 	chainID *big.Int
-	hub     *bridgehub.BridgeHub
+	hub     DepositConfirmer
 }
 
-func NewBridge(ctx context.Context, cfg Config, hub *bridgehub.BridgeHub) (*Bridge, error) {
+func NewBridge(ctx context.Context, cfg Config, hub DepositConfirmer) (*Bridge, error) {
 	client, err := NewClient(cfg.NodeURL, cfg.CommitmentType(), &cfg.RetryConfig, nil)
 	if err != nil {
 		return nil, err

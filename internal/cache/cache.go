@@ -32,6 +32,11 @@ func NewBadgerCache(source string) (*BadgerCache, error) {
 	return &BadgerCache{db: db}, nil
 }
 
+// Close closes the underlying Badger database.
+func (c *BadgerCache) Close() error {
+	return c.db.Close()
+}
+
 // getChainKey generates a chain-specific cache key
 func getChainKey(chainID uint64) string {
 	return fmt.Sprintf("%s_%d", scannedBlockKeyPrefix, chainID)
