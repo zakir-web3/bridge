@@ -8,3 +8,5 @@ bin
 docs/
 solidity/forge-out/
 solidity/forge-cache/
+.vscode/
+.cursor/
