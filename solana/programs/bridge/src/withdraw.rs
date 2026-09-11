@@ -292,13 +292,13 @@ pub struct Withdraw<'info> {
         seeds = [b"config"],
         bump = config.bump,
     )]
-    pub config: Account<'info, BridgeConfig>,
+    pub config: Box<Account<'info, BridgeConfig>>,
 
     #[account(
         seeds = [b"validator_set"],
         bump = validator_set.bump,
     )]
-    pub validator_set: Account<'info, ValidatorSet>,
+    pub validator_set: Box<Account<'info, ValidatorSet>>,
 
     pub mint: Account<'info, Mint>,
 
@@ -321,7 +321,7 @@ pub struct Withdraw<'info> {
         associated_token::mint = mint,
         associated_token::authority = vault_authority,
     )]
-    pub vault_token_account: Account<'info, TokenAccount>,
+    pub vault_token_account: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: Must match `destination` bytes (verified in handler).
     pub destination_owner: UncheckedAccount<'info>,
@@ -332,7 +332,7 @@ pub struct Withdraw<'info> {
         associated_token::mint = mint,
         associated_token::authority = destination_owner,
     )]
-    pub destination_token_account: Account<'info, TokenAccount>,
+    pub destination_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init_if_needed,
@@ -341,7 +341,7 @@ pub struct Withdraw<'info> {
         seeds = [b"nonce_page" as &[u8], &(nonce / 8192u64).to_le_bytes()],
         bump,
     )]
-    pub nonce_page: Account<'info, NoncePage>,
+    pub nonce_page: Box<Account<'info, NoncePage>>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
