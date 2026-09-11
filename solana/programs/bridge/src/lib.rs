@@ -15,16 +15,19 @@ pub mod bridge {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, chain_id: u64) -> Result<()> {
+        require!(
+            chain_id == withdraw::CANONICAL_CHAIN_ID,
+            BridgeError::ChainIdMismatch
+        );
+
         let config = &mut ctx.accounts.config;
         config.admin = ctx.accounts.admin.key();
         config.paused = false;
         config.bump = ctx.bumps.config;
         config.chain_id = chain_id;
         config.withdraw_paused = false;
-
-        let vc = withdraw::derive_verifying_contract(&crate::ID);
-        config.verifying_contract = vc;
-        config.domain_separator = withdraw::compute_domain_separator(chain_id, &vc);
+        config.verifying_contract = withdraw::VERIFYING_CONTRACT;
+        config.domain_separator = withdraw::DOMAIN_SEPARATOR;
 
         Ok(())
     }

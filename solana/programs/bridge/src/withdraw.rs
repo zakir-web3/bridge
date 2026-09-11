@@ -5,30 +5,70 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 use crate::state::*;
 
 // ---------------------------------------------------------------------------
-// EIP-712 constants (must byte-align with Go / EVM)
+// Compile-time hex literal helper (must precede all uses)
+// ---------------------------------------------------------------------------
+
+/// Decode a fixed-length hex string at compile time.
+macro_rules! hex_literal {
+    ($hex:literal) => {{
+        const N: usize = $hex.len() / 2;
+        const fn hex_val(c: u8) -> u8 {
+            match c {
+                b'0'..=b'9' => c - b'0',
+                b'a'..=b'f' => c - b'a' + 10,
+                b'A'..=b'F' => c - b'A' + 10,
+                _ => panic!("invalid hex character"),
+            }
+        }
+        const fn decode<const M: usize>(hex: &[u8]) -> [u8; M] {
+            let mut out = [0u8; M];
+            let mut i = 0;
+            while i < M {
+                out[i] = hex_val(hex[2 * i]) << 4 | hex_val(hex[2 * i + 1]);
+                i += 1;
+            }
+            out
+        }
+        decode::<N>($hex.as_bytes())
+    }};
+}
+
+// ---------------------------------------------------------------------------
+// Program-specific constants
+// ---------------------------------------------------------------------------
+
+/// Canonical chain ID for this program's EIP-712 domain.
+/// Must match `SOLANA_CHAIN_ID` in `scripts/solana-e2e.sh` and relayer config.
+pub const CANONICAL_CHAIN_ID: u64 = 900_001;
+
+/// `keccak256(program_id)[12..32]` where program_id = C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq.
+/// Serves as the EIP-712 `verifyingContract` pseudo-address.
+pub const VERIFYING_CONTRACT: [u8; 20] = hex_literal!("db94ec3d773ea0a5b9b89b4bf28ed21dec3f0f8f");
+
+/// Precomputed EIP-712 domain separator for this program:
+/// `keccak256(EIP712_DOMAIN_TYPEHASH ‖ NAME_HASH ‖ VERSION_HASH ‖ u256(900001) ‖ pad12(VERIFYING_CONTRACT))`
+pub const DOMAIN_SEPARATOR: [u8; 32] =
+    hex_literal!("e038ca293e650b49e9781d6f45d165e6ac0f202e3e6d4e00c07072d8088c3633");
+
+// ---------------------------------------------------------------------------
+// EIP-712 typehash constants (precomputed, must byte-align with Go / EVM)
 // ---------------------------------------------------------------------------
 
 /// `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`
-const EIP712_DOMAIN_TYPEHASH: [u8; 32] = {
-    const HASH: [u8; 32] = keccak256_const(
-        b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
-    );
-    HASH
-};
+const EIP712_DOMAIN_TYPEHASH: [u8; 32] =
+    hex_literal!("8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f");
 
 /// `keccak256("Withdraw(address user,bytes32 destination,bytes32 token,uint256 amount,uint256 chainId,uint64 nonce)")`
-const WITHDRAW_TYPEHASH: [u8; 32] = {
-    const HASH: [u8; 32] = keccak256_const(
-        b"Withdraw(address user,bytes32 destination,bytes32 token,uint256 amount,uint256 chainId,uint64 nonce)",
-    );
-    HASH
-};
+const WITHDRAW_TYPEHASH: [u8; 32] =
+    hex_literal!("ae7dee9fe1cf9016b724a74908236e5f57a1789d05c09f2625fa9baee0cde49d");
 
 /// `keccak256("Bridge")`
-const NAME_HASH: [u8; 32] = keccak256_const(b"Bridge");
+const NAME_HASH: [u8; 32] =
+    hex_literal!("7aa5ae620294318af92bf4e2b2a729646c932a80312a5fa630da993a2ef5cc10");
 
 /// `keccak256("1")`
-const VERSION_HASH: [u8; 32] = keccak256_const(b"1");
+const VERSION_HASH: [u8; 32] =
+    hex_literal!("c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6");
 
 /// secp256k1 half-order `n/2` for low-S enforcement.
 const SECP256K1_HALF_ORDER: [u8; 32] = [
@@ -36,138 +76,6 @@ const SECP256K1_HALF_ORDER: [u8; 32] = [
     0xFF, 0x5D, 0x57, 0x6E, 0x73, 0x57, 0xA4, 0x50, 0x1D, 0xDF, 0xE9, 0x2F, 0x46, 0x68, 0x1B,
     0x20, 0xA0,
 ];
-
-// ---------------------------------------------------------------------------
-// Compile-time keccak256 (tiny Keccak-f[1600] for const evaluation)
-// ---------------------------------------------------------------------------
-
-/// Compile-time keccak256 for constant inputs (typehashes, name/version).
-/// NOT used on-chain — the syscall `solana_keccak_hasher::hashv` handles runtime hashing.
-const fn keccak256_const(input: &[u8]) -> [u8; 32] {
-    const RATE: usize = 136;
-    let mut state = [0u64; 25];
-    let mut buf = [0u8; RATE];
-    let mut buf_len = 0usize;
-
-    let mut i = 0;
-    while i < input.len() {
-        buf[buf_len] = input[i];
-        buf_len += 1;
-        if buf_len == RATE {
-            state = absorb(state, &buf);
-            buf = [0u8; RATE];
-            buf_len = 0;
-        }
-        i += 1;
-    }
-    buf[buf_len] = 0x01;
-    buf[RATE - 1] |= 0x80;
-    state = absorb(state, &buf);
-    squeeze(state)
-}
-
-const fn absorb(mut state: [u64; 25], block: &[u8; 136]) -> [u64; 25] {
-    let mut i = 0;
-    while i < 136 / 8 {
-        let off = i * 8;
-        let word = (block[off] as u64)
-            | (block[off + 1] as u64) << 8
-            | (block[off + 2] as u64) << 16
-            | (block[off + 3] as u64) << 24
-            | (block[off + 4] as u64) << 32
-            | (block[off + 5] as u64) << 40
-            | (block[off + 6] as u64) << 48
-            | (block[off + 7] as u64) << 56;
-        state[i] ^= word;
-        i += 1;
-    }
-    keccak_f1600(state)
-}
-
-const fn squeeze(state: [u64; 25]) -> [u8; 32] {
-    let mut out = [0u8; 32];
-    let mut i = 0;
-    while i < 4 {
-        let w = state[i];
-        let off = i * 8;
-        out[off] = w as u8;
-        out[off + 1] = (w >> 8) as u8;
-        out[off + 2] = (w >> 16) as u8;
-        out[off + 3] = (w >> 24) as u8;
-        out[off + 4] = (w >> 32) as u8;
-        out[off + 5] = (w >> 40) as u8;
-        out[off + 6] = (w >> 48) as u8;
-        out[off + 7] = (w >> 56) as u8;
-        i += 1;
-    }
-    out
-}
-
-#[rustfmt::skip]
-const RC: [u64; 24] = [
-    0x0000000000000001, 0x0000000000008082, 0x800000000000808A, 0x8000000080008000,
-    0x000000000000808B, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
-    0x000000000000008A, 0x0000000000000088, 0x0000000080008009, 0x000000008000000A,
-    0x000000008000808B, 0x800000000000008B, 0x8000000000008089, 0x8000000000008003,
-    0x8000000000008002, 0x8000000000000080, 0x000000000000800A, 0x800000008000000A,
-    0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008,
-];
-
-const fn keccak_f1600(mut a: [u64; 25]) -> [u64; 25] {
-    let mut round = 0;
-    while round < 24 {
-        // θ
-        let c = [
-            a[0] ^ a[5] ^ a[10] ^ a[15] ^ a[20],
-            a[1] ^ a[6] ^ a[11] ^ a[16] ^ a[21],
-            a[2] ^ a[7] ^ a[12] ^ a[17] ^ a[22],
-            a[3] ^ a[8] ^ a[13] ^ a[18] ^ a[23],
-            a[4] ^ a[9] ^ a[14] ^ a[19] ^ a[24],
-        ];
-        let d = [
-            c[4] ^ c[1].rotate_left(1),
-            c[0] ^ c[2].rotate_left(1),
-            c[1] ^ c[3].rotate_left(1),
-            c[2] ^ c[4].rotate_left(1),
-            c[3] ^ c[0].rotate_left(1),
-        ];
-        let mut i = 0;
-        while i < 25 {
-            a[i] ^= d[i % 5];
-            i += 1;
-        }
-        // ρ + π
-        let mut b = [0u64; 25];
-        #[rustfmt::skip]
-        const PILN: [(usize, u32); 25] = [
-            (0,0),(6,44),(12,43),(18,21),(24,14),
-            (3,28),(9,20),(10,3),(16,45),(22,61),
-            (1,1),(7,6),(13,25),(19,8),(20,18),
-            (4,27),(5,36),(11,10),(17,15),(23,56),
-            (2,62),(8,55),(14,39),(15,41),(21,2),
-        ];
-        let mut j = 0;
-        while j < 25 {
-            let (src, rot) = PILN[j];
-            b[j] = a[src].rotate_left(rot);
-            j += 1;
-        }
-        // χ
-        i = 0;
-        while i < 5 {
-            let mut j2 = 0;
-            while j2 < 5 {
-                a[5 * i + j2] = b[5 * i + j2] ^ (!b[5 * i + (j2 + 1) % 5] & b[5 * i + (j2 + 2) % 5]);
-                j2 += 1;
-            }
-            i += 1;
-        }
-        // ι
-        a[0] ^= RC[round];
-        round += 1;
-    }
-    a
-}
 
 // ---------------------------------------------------------------------------
 // Runtime helpers (use Solana syscalls on-chain)
@@ -181,7 +89,8 @@ fn keccak256v(slices: &[&[u8]]) -> [u8; 32] {
     solana_keccak_hasher::hashv(slices).to_bytes()
 }
 
-/// Compute the EIP-712 domain separator. Called once during `initialize`.
+/// Compute the EIP-712 domain separator at runtime (used by unit tests for
+/// cross-checking against Go conformance vectors with non-canonical parameters).
 pub fn compute_domain_separator(chain_id: u64, verifying_contract: &[u8; 20]) -> [u8; 32] {
     let mut chain_id_word = [0u8; 32];
     chain_id_word[24..].copy_from_slice(&chain_id.to_be_bytes());
@@ -392,7 +301,7 @@ pub fn handle_withdraw(
         BridgeError::NonceAlreadyUsed
     );
 
-    // 6. Compute EIP-712 digest
+    // 6. Compute EIP-712 digest using the stored domain separator
     let token_bytes: [u8; 32] = ctx.accounts.mint.key().to_bytes();
     let struct_hash = compute_struct_hash(
         &user,
@@ -479,12 +388,14 @@ pub fn handle_withdraw(
 }
 
 // ---------------------------------------------------------------------------
-// Unit tests (EIP-712 conformance against Go test vectors)
+// Unit tests
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // -- Precomputed literal assertions (verify hex literals match runtime keccak) --
 
     #[test]
     fn test_withdraw_typehash() {
@@ -512,17 +423,23 @@ mod tests {
         assert_eq!(VERSION_HASH, keccak256(b"1"));
     }
 
+    #[test]
+    fn test_verifying_contract() {
+        let program_id = crate::ID;
+        let derived = derive_verifying_contract(&program_id);
+        assert_eq!(derived, VERIFYING_CONTRACT);
+    }
+
+    #[test]
+    fn test_domain_separator_constant() {
+        let computed = compute_domain_separator(CANONICAL_CHAIN_ID, &VERIFYING_CONTRACT);
+        assert_eq!(computed, DOMAIN_SEPARATOR);
+    }
+
+    // -- Go conformance vectors (chain_id=1337, fake verifyingContract) --
+
     /// Conformance: Go test `TestBridgeHubWithdraw_ToTypedData` in
     /// `internal/contract/bridge_hub_test.go`.
-    ///
-    /// Parameters:
-    /// - user: 0x1000000000000000000000000000000000000001
-    /// - destination: AddressToBytes32(0x1000000000000000000000000000000000000001)
-    /// - token: AddressToBytes32(0x2000000000000000000000000000000000000002)
-    /// - amount: 1e18
-    /// - chainId (domain + struct): 1337
-    /// - nonce: 12345
-    /// - verifyingContract: 0x3000000000000000000000000000000000000003
     #[test]
     fn test_struct_hash_go_vector() {
         let user: [u8; 20] = hex_decode_20("1000000000000000000000000000000000000001");
@@ -584,31 +501,21 @@ mod tests {
         );
     }
 
+    // -- Security --
+
     #[test]
     fn test_low_s_boundary() {
-        // Exactly at half-order → valid
         let mut sig_at_half = [0u8; 64];
         sig_at_half[32..].copy_from_slice(&SECP256K1_HALF_ORDER);
         assert!(is_low_s(&sig_at_half));
 
-        // One above half-order → invalid
         let mut sig_above = [0u8; 64];
         sig_above[32..].copy_from_slice(&SECP256K1_HALF_ORDER);
-        sig_above[63] += 1; // increment last byte
+        sig_above[63] += 1;
         assert!(!is_low_s(&sig_above));
 
-        // Zero S → valid
         let sig_zero = [0u8; 64];
         assert!(is_low_s(&sig_zero));
-    }
-
-    #[test]
-    fn test_const_vs_runtime_keccak() {
-        // Ensure compile-time keccak matches runtime syscall-based keccak
-        let data = b"Withdraw(address user,bytes32 destination,bytes32 token,uint256 amount,uint256 chainId,uint64 nonce)";
-        let const_result = keccak256_const(data);
-        let runtime_result = keccak256(data);
-        assert_eq!(const_result, runtime_result);
     }
 
     // Test helpers

@@ -116,4 +116,6 @@ pub enum BridgeError {
     NoValidators,
     #[msg("Validator set not initialized")]
     ValidatorSetNotInitialized,
+    #[msg("chain_id must equal the canonical chain ID for this program")]
+    ChainIdMismatch,
 }
