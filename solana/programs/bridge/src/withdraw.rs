@@ -89,31 +89,6 @@ fn keccak256v(slices: &[&[u8]]) -> [u8; 32] {
     solana_keccak_hasher::hashv(slices).to_bytes()
 }
 
-/// Compute the EIP-712 domain separator at runtime (used by unit tests for
-/// cross-checking against Go conformance vectors with non-canonical parameters).
-pub fn compute_domain_separator(chain_id: u64, verifying_contract: &[u8; 20]) -> [u8; 32] {
-    let mut chain_id_word = [0u8; 32];
-    chain_id_word[24..].copy_from_slice(&chain_id.to_be_bytes());
-
-    let mut vc_word = [0u8; 32];
-    vc_word[12..].copy_from_slice(verifying_contract);
-
-    keccak256v(&[
-        &EIP712_DOMAIN_TYPEHASH,
-        &NAME_HASH,
-        &VERSION_HASH,
-        &chain_id_word,
-        &vc_word,
-    ])
-}
-
-/// Derive a pseudo-EVM address from a Solana program ID: `keccak256(program_id)[12..32]`.
-pub fn derive_verifying_contract(program_id: &Pubkey) -> [u8; 20] {
-    let hash = keccak256(program_id.as_ref());
-    let mut out = [0u8; 20];
-    out.copy_from_slice(&hash[12..32]);
-    out
-}
 
 /// Compute the EIP-712 struct hash for a Withdraw message.
 fn compute_struct_hash(
@@ -394,6 +369,29 @@ pub fn handle_withdraw(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // -- Test-only helpers for cross-checking constants against runtime keccak --
+
+    fn compute_domain_separator(chain_id: u64, verifying_contract: &[u8; 20]) -> [u8; 32] {
+        let mut chain_id_word = [0u8; 32];
+        chain_id_word[24..].copy_from_slice(&chain_id.to_be_bytes());
+        let mut vc_word = [0u8; 32];
+        vc_word[12..].copy_from_slice(verifying_contract);
+        keccak256v(&[
+            &EIP712_DOMAIN_TYPEHASH,
+            &NAME_HASH,
+            &VERSION_HASH,
+            &chain_id_word,
+            &vc_word,
+        ])
+    }
+
+    fn derive_verifying_contract(program_id: &Pubkey) -> [u8; 20] {
+        let hash = keccak256(program_id.as_ref());
+        let mut out = [0u8; 20];
+        out.copy_from_slice(&hash[12..32]);
+        out
+    }
 
     // -- Precomputed literal assertions (verify hex literals match runtime keccak) --
 
