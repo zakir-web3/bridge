@@ -90,14 +90,24 @@ pub mod bridge {
         let vs = &mut ctx.accounts.validator_set;
         require!(epoch > vs.epoch, BridgeError::EpochNotIncreasing);
 
-        let total_power: u64 = validators.iter().map(|v| v.power).sum();
+        let mut total_power: u64 = 0;
+        for (i, v) in validators.iter().enumerate() {
+            require!(v.power > 0, BridgeError::ZeroPower);
+            total_power = total_power
+                .checked_add(v.power)
+                .ok_or(error!(BridgeError::TotalPowerOverflow))?;
+            for prev in &validators[..i] {
+                require!(
+                    v.eth_address != prev.eth_address,
+                    BridgeError::DuplicateValidator
+                );
+            }
+        }
+
         vs.epoch = epoch;
         vs.total_power = total_power;
         vs.validators = validators;
-        // bump is set on first init; on realloc it stays the same
-        if vs.bump == 0 {
-            vs.bump = ctx.bumps.validator_set;
-        }
+        vs.bump = ctx.bumps.validator_set;
 
         Ok(())
     }

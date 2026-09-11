@@ -118,4 +118,12 @@ pub enum BridgeError {
     ValidatorSetNotInitialized,
     #[msg("chain_id must equal the canonical chain ID for this program")]
     ChainIdMismatch,
+    #[msg("Stored domain separator does not match program constant")]
+    DomainSeparatorMismatch,
+    #[msg("Total validator power overflows u64")]
+    TotalPowerOverflow,
+    #[msg("Validator power must be greater than zero")]
+    ZeroPower,
+    #[msg("Duplicate eth_address in validator set")]
+    DuplicateValidator,
 }

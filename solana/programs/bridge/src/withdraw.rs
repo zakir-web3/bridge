@@ -264,7 +264,17 @@ pub fn handle_withdraw(
         BridgeError::DestinationMismatch
     );
 
-    // 5. Nonce not already used
+    // 5. Defense-in-depth: stored config must match program constants
+    require!(
+        config.chain_id == CANONICAL_CHAIN_ID,
+        BridgeError::ChainIdMismatch
+    );
+    require!(
+        config.domain_separator == DOMAIN_SEPARATOR,
+        BridgeError::DomainSeparatorMismatch
+    );
+
+    // 6. Nonce not already used
     let page_num = nonce / 8192;
     let bit_index = (nonce % 8192) as usize;
     let byte_index = bit_index / 8;
@@ -276,19 +286,19 @@ pub fn handle_withdraw(
         BridgeError::NonceAlreadyUsed
     );
 
-    // 6. Compute EIP-712 digest using the stored domain separator
+    // 7. Compute EIP-712 digest using the program constant
     let token_bytes: [u8; 32] = ctx.accounts.mint.key().to_bytes();
     let struct_hash = compute_struct_hash(
         &user,
         &destination,
         &token_bytes,
         amount,
-        config.chain_id,
+        CANONICAL_CHAIN_ID,
         nonce,
     );
-    let digest = compute_digest(&config.domain_separator, &struct_hash);
+    let digest = compute_digest(&DOMAIN_SEPARATOR, &struct_hash);
 
-    // 7–8. Verify signatures, accumulate power, check quorum
+    // 8–9. Verify signatures, accumulate power, check quorum
     let validator_set = &ctx.accounts.validator_set;
     require!(
         !validator_set.validators.is_empty(),
@@ -323,13 +333,13 @@ pub fn handle_withdraw(
         BridgeError::InsufficientQuorum
     );
 
-    // 9. Mark nonce as used
+    // 10. Mark nonce as used
     let nonce_page = &mut ctx.accounts.nonce_page;
     nonce_page.page = page_num;
     nonce_page.bump = ctx.bumps.nonce_page;
     nonce_page.bits[byte_index] |= bit_mask;
 
-    // 10. Transfer tokens from vault to destination
+    // 11. Transfer tokens from vault to destination
     let mint_key = ctx.accounts.mint.key();
     let vault_bump = ctx.bumps.vault_authority;
     let signer_seeds: &[&[u8]] = &[b"vault", mint_key.as_ref(), &[vault_bump]];
@@ -349,7 +359,7 @@ pub fn handle_withdraw(
         ctx.accounts.mint.decimals,
     )?;
 
-    // 11. Emit event for future relayer scanning
+    // 12. Emit event for future relayer scanning
     emit!(WithdrawFinalized {
         message: struct_hash,
         user,
