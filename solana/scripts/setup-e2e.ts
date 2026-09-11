@@ -9,6 +9,7 @@ import { configPda, getProgram, vaultAddresses } from "./utils";
 
 const TOKEN_DECIMALS = 6;
 const MINT_AMOUNT = 1_000_000_000; // 1000 tokens with 6 decimals
+const CHAIN_ID = Number(process.env.SOLANA_CHAIN_ID ?? "900001");
 
 async function main() {
   const { provider, program } = getProgram();
@@ -17,7 +18,10 @@ async function main() {
 
   const existingConfig = await provider.connection.getAccountInfo(config);
   if (!existingConfig) {
-    const sig = await program.methods.initialize().accounts({}).rpc();
+    const sig = await program.methods
+      .initialize(new anchor.BN(CHAIN_ID))
+      .accounts({})
+      .rpc();
     console.log("initialized bridge config:", sig);
   }
 
