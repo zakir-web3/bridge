@@ -1,4 +1,7 @@
+import * as anchor from "@anchor-lang/core";
 import { getProgram, configPda } from "./utils";
+
+const CHAIN_ID = Number(process.env.SOLANA_CHAIN_ID ?? "900001");
 
 async function main() {
   const { provider, program } = getProgram();
@@ -11,10 +14,14 @@ async function main() {
     console.log("  config:", config.toBase58());
     console.log("  admin:", cfg.admin.toBase58());
     console.log("  paused:", cfg.paused);
+    console.log("  chainId:", cfg.chainId.toNumber());
     return;
   }
 
-  const sig = await program.methods.initialize().accounts({}).rpc();
+  const sig = await program.methods
+    .initialize(new anchor.BN(CHAIN_ID))
+    .accounts({})
+    .rpc();
 
   const cfg = await program.account.bridgeConfig.fetch(config);
   console.log("initialize succeeded");
@@ -22,6 +29,7 @@ async function main() {
   console.log("  config:", config.toBase58());
   console.log("  admin:", cfg.admin.toBase58());
   console.log("  paused:", cfg.paused);
+  console.log("  chainId:", cfg.chainId.toNumber());
 }
 
 main().catch((err) => {
