@@ -130,3 +130,103 @@ func pubkeyToBytes32(pub solana.PublicKey) [32]byte {
 	copy(out[:], pub.Bytes())
 	return out
 }
+
+// ParsedWithdrawFinalized is the parsed on-chain withdraw-finalized event plus tx metadata.
+type ParsedWithdrawFinalized struct {
+	contract.SolanaWithdrawFinalized
+	Signature solana.Signature
+	Slot      uint64
+}
+
+// ParseWithdrawFinalizedEvent decodes Anchor WithdrawFinalized bytes (after 8-byte discriminator).
+func ParseWithdrawFinalizedEvent(data []byte) (contract.SolanaWithdrawFinalized, error) {
+	const bodyLen = 32 + 20 + 32 + 32 + 8 + 8
+	if len(data) < 8+bodyLen {
+		return contract.SolanaWithdrawFinalized{}, errors.New("withdraw finalized event data too short")
+	}
+	if !bytes.Equal(data[:8], withdrawFinalizedEventDiscriminator) {
+		return contract.SolanaWithdrawFinalized{}, errors.New("invalid withdraw finalized event discriminator")
+	}
+	offset := 8
+	var parsed contract.SolanaWithdrawFinalized
+	copy(parsed.Message[:], data[offset:offset+32])
+	offset += 32
+	parsed.User = common.BytesToAddress(data[offset : offset+20])
+	offset += 20
+	copy(parsed.Destination[:], data[offset:offset+32])
+	offset += 32
+	copy(parsed.Token[:], data[offset:offset+32])
+	offset += 32
+	amount := binary.LittleEndian.Uint64(data[offset : offset+8])
+	parsed.Amount = new(big.Int).SetUint64(amount)
+	offset += 8
+	parsed.Nonce = binary.LittleEndian.Uint64(data[offset : offset+8])
+	return parsed, nil
+}
+
+// ParseWithdrawFinalizedFromLogs scans program logs for a WithdrawFinalized event.
+func ParseWithdrawFinalizedFromLogs(logs []string) (contract.SolanaWithdrawFinalized, error) {
+	for _, line := range logs {
+		const prefix = "Program data: "
+		if len(line) < len(prefix) || line[:len(prefix)] != prefix {
+			continue
+		}
+		raw, decErr := base64.StdEncoding.DecodeString(line[len(prefix):])
+		if decErr != nil {
+			continue
+		}
+		parsed, err := ParseWithdrawFinalizedEvent(raw)
+		if err == nil {
+			return parsed, nil
+		}
+	}
+	return contract.SolanaWithdrawFinalized{}, errors.New("withdraw finalized event not found in logs")
+}
+
+// ParseWithdrawFinalizedFromTransaction parses a finalized transaction for withdraw release.
+func ParseWithdrawFinalizedFromTransaction(
+	programID solana.PublicKey,
+	result *rpc.GetTransactionResult,
+	signature solana.Signature,
+) (*ParsedWithdrawFinalized, error) {
+	if result == nil || result.Meta == nil {
+		return nil, errors.New("empty transaction result")
+	}
+	if result.Slot == 0 {
+		return nil, errors.New("transaction slot missing")
+	}
+
+	event, err := ParseWithdrawFinalizedFromLogs(result.Meta.LogMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Transaction != nil {
+		tx, txErr := result.Transaction.GetTransaction()
+		if txErr == nil {
+			if _, ixErr := findWithdrawInstructionIndex(tx, programID); ixErr != nil {
+				return nil, ixErr
+			}
+		}
+	}
+
+	return &ParsedWithdrawFinalized{
+		SolanaWithdrawFinalized: event,
+		Signature:               signature,
+		Slot:                    result.Slot,
+	}, nil
+}
+
+func findWithdrawInstructionIndex(tx *solana.Transaction, programID solana.PublicKey) (uint32, error) {
+	accountKeys := tx.Message.AccountKeys
+	for i, ix := range tx.Message.Instructions {
+		programKey := accountKeys[ix.ProgramIDIndex]
+		if programKey.Equals(programID) && IsWithdrawInstruction(ix.Data) {
+			if i < 0 || i > int(^uint32(0)) {
+				return 0, errors.Errorf("instruction index %d out of uint32 range", i)
+			}
+			return uint32(i), nil
+		}
+	}
+	return 0, errors.New("withdraw instruction not found")
+}
