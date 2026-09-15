@@ -124,6 +124,14 @@ program_id = "C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq"
 bridge_mints = [
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 ]
+# Solana fee payer keypair (base58) for permissionless withdraw submissions
+# fee_payer_key = "<BASE58_SECRET_KEY>"
+# When true, submit Solana withdraw transactions after hub quorum signatures
+enable_withdraw = false
+# When true, build but do not broadcast Solana withdraw transactions
+no_send = false
+# Compute unit price (micro-lamports) prepended via ComputeBudget for withdraw txs
+compute_unit_price = 1000
 
 # RPC retry settings (shared with EVM sections)
 # Maximum number of retries when an RPC request fails

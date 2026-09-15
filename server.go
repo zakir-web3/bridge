@@ -46,10 +46,11 @@ func Start(cfg *Config) error {
 	var wg sync.WaitGroup
 
 	if cfg.Solana.Enabled() {
-		solanaBridgeInstance, err := solana.NewBridge(ctx, cfg.Solana, bridgeHubInstance)
+		solanaBridgeInstance, err := solana.NewBridge(ctx, cfg.Solana, bridgeHubInstance, bridgeHubInstance)
 		if err != nil {
 			return err
 		}
+		bridgeHubInstance.RegisterBridgeContract(solanaBridgeInstance.GetChainID().Uint64(), solanaBridgeInstance)
 		solanaScanner := solana.NewScanner(cfg.Solana.SlotScannerConfig, badgerCache, solanaBridgeInstance)
 		SafeGo("solana-scanner", func() error {
 			log.Info().Str("solana_interval", cfg.Solana.Interval.String()).Msg("Solana scanner configured")
