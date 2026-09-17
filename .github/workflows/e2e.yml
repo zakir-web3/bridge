@@ -36,7 +36,7 @@ jobs:
         run: make evm-e2e
 
   solana-e2e:
-    name: Solana deposit
+    name: Solana deposit and withdraw
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

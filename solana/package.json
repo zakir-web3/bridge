@@ -7,7 +7,8 @@
     "initialize": "ts-node scripts/initialize.ts",
     "initialize-vault": "ts-node scripts/initialize-vault.ts",
     "deposit": "ts-node scripts/deposit.ts",
-    "setup-e2e": "ts-node scripts/setup-e2e.ts"
+    "setup-e2e": "ts-node scripts/setup-e2e.ts",
+    "setup-validator-set": "ts-node scripts/setup-validator-set.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.1.2",
