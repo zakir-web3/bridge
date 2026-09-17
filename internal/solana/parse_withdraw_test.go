@@ -24,7 +24,7 @@ func TestParseWithdrawFinalizedEvent(t *testing.T) {
 	raw = append(raw, mint.Bytes()...)
 	amountLE := []byte{0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} // 4096 LE
 	raw = append(raw, amountLE...)
-	raw = append(raw, 0x2a, 0, 0, 0, 0, 0, 0, 0)    // nonce 42 LE
+	raw = append(raw, 0x2a, 0, 0, 0, 0, 0, 0, 0) // nonce 42 LE
 
 	parsed, err := ParseWithdrawFinalizedEvent(raw)
 	require.NoError(t, err)

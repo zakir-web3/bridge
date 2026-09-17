@@ -5,8 +5,9 @@ import (
 	"math/big"
 
 	"github.com/gagliardetto/solana-go"
-	computebudget "github.com/gagliardetto/solana-go/programs/compute-budget"
 	"github.com/pkg/errors"
+
+	computebudget "github.com/gagliardetto/solana-go/programs/compute-budget"
 
 	"github.com/zakir-web3/bridge/internal/contract"
 )
@@ -19,8 +20,8 @@ const (
 
 // EcdsaSignature is the on-chain Anchor representation of a validator ECDSA signature.
 type EcdsaSignature struct {
-	Sig         [64]byte
-	RecoveryID  uint8
+	Sig        [64]byte
+	RecoveryID uint8
 }
 
 // WithdrawParams holds decoded withdraw message fields for Solana submission.
@@ -49,7 +50,9 @@ func EncodeWithdrawInstructionData(params WithdrawParams) ([]byte, error) {
 	data = append(data, nonceBuf...)
 
 	sigCount := uint32(len(params.Signatures)) //nolint:gosec // G115: sig count bounded by validator set size
-	data = append(data, byte(sigCount), byte(sigCount>>8), byte(sigCount>>16), byte(sigCount>>24))
+	sigCountBuf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sigCountBuf, sigCount)
+	data = append(data, sigCountBuf...)
 	for _, sig := range params.Signatures {
 		data = append(data, sig.Sig[:]...)
 		data = append(data, sig.RecoveryID)
@@ -142,7 +145,7 @@ func ComputeUnitLimitForWithdraw(sigCount int) uint32 {
 	if limit > uint64(^uint32(0)) {
 		return ^uint32(0)
 	}
-	return uint32(limit) //nolint:gosec // G115: bounded by validator set size
+	return uint32(limit)
 }
 
 // PrependComputeBudgetInstructions returns compute budget ixs for legacy/v0 transactions.
@@ -195,4 +198,3 @@ func bytesEqual(a, b []byte) bool {
 	}
 	return true
 }
-

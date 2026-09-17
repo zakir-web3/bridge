@@ -75,7 +75,7 @@ func ParseWithdrawMessageRawData(rawData []byte) (
 ) {
 	if len(rawData) < 32+192 {
 		err = ErrWithdrawRawDataTooShort
-		return
+		return user, destination, token, amount, chainID, nonce, err
 	}
 	encoded := rawData[32:]
 
@@ -85,7 +85,7 @@ func ParseWithdrawMessageRawData(rawData []byte) (
 	amount = new(big.Int).SetBytes(encoded[96:128])
 	chainID = new(big.Int).SetBytes(encoded[128:160])
 	nonce = new(big.Int).SetBytes(encoded[160:192]).Uint64()
-	return
+	return user, destination, token, amount, chainID, nonce, err
 }
 
 // NonEmptyValidatorSignatures returns only non-empty signatures from a hub quorum payload.
