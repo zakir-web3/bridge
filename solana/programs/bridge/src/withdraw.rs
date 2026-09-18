@@ -41,15 +41,6 @@ macro_rules! hex_literal {
 /// Must match `SOLANA_CHAIN_ID` in `scripts/solana-e2e.sh` and relayer config.
 pub const CANONICAL_CHAIN_ID: u64 = 900_001;
 
-/// `keccak256(program_id)[12..32]` where program_id = C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq.
-/// Serves as the EIP-712 `verifyingContract` pseudo-address.
-pub const VERIFYING_CONTRACT: [u8; 20] = hex_literal!("db94ec3d773ea0a5b9b89b4bf28ed21dec3f0f8f");
-
-/// Precomputed EIP-712 domain separator for this program:
-/// `keccak256(EIP712_DOMAIN_TYPEHASH ‖ NAME_HASH ‖ VERSION_HASH ‖ u256(900001) ‖ pad12(VERIFYING_CONTRACT))`
-pub const DOMAIN_SEPARATOR: [u8; 32] =
-    hex_literal!("e038ca293e650b49e9781d6f45d165e6ac0f202e3e6d4e00c07072d8088c3633");
-
 // ---------------------------------------------------------------------------
 // EIP-712 typehash constants (precomputed, must byte-align with Go / EVM)
 // ---------------------------------------------------------------------------
@@ -89,6 +80,34 @@ fn keccak256v(slices: &[&[u8]]) -> [u8; 32] {
     solana_keccak_hasher::hashv(slices).to_bytes()
 }
 
+/// EIP-712 `verifyingContract` pseudo-address: `keccak256(program_id)[12..32]`.
+/// Must match Go `VerifyingContractFromProgramID`.
+pub fn verifying_contract_from_program_id(program_id: &Pubkey) -> [u8; 20] {
+    let hash = keccak256(program_id.as_ref());
+    let mut out = [0u8; 20];
+    out.copy_from_slice(&hash[12..32]);
+    out
+}
+
+/// Bridge-domain EIP-712 separator for the deployed program ID and chain ID.
+pub fn domain_separator_for_program(program_id: &Pubkey, chain_id: u64) -> [u8; 32] {
+    let verifying_contract = verifying_contract_from_program_id(program_id);
+    compute_domain_separator(chain_id, &verifying_contract)
+}
+
+fn compute_domain_separator(chain_id: u64, verifying_contract: &[u8; 20]) -> [u8; 32] {
+    let mut chain_id_word = [0u8; 32];
+    chain_id_word[24..].copy_from_slice(&chain_id.to_be_bytes());
+    let mut vc_word = [0u8; 32];
+    vc_word[12..].copy_from_slice(verifying_contract);
+    keccak256v(&[
+        &EIP712_DOMAIN_TYPEHASH,
+        &NAME_HASH,
+        &VERSION_HASH,
+        &chain_id_word,
+        &vc_word,
+    ])
+}
 
 /// Compute the EIP-712 struct hash for a Withdraw message.
 fn compute_struct_hash(
@@ -269,8 +288,15 @@ pub fn handle_withdraw(
         config.chain_id == CANONICAL_CHAIN_ID,
         BridgeError::ChainIdMismatch
     );
+    let expected_verifying_contract = verifying_contract_from_program_id(&crate::ID);
     require!(
-        config.domain_separator == DOMAIN_SEPARATOR,
+        config.verifying_contract == expected_verifying_contract,
+        BridgeError::VerifyingContractMismatch
+    );
+    let expected_domain_separator =
+        domain_separator_for_program(&crate::ID, CANONICAL_CHAIN_ID);
+    require!(
+        config.domain_separator == expected_domain_separator,
         BridgeError::DomainSeparatorMismatch
     );
 
@@ -286,7 +312,7 @@ pub fn handle_withdraw(
         BridgeError::NonceAlreadyUsed
     );
 
-    // 7. Compute EIP-712 digest using the program constant
+    // 7. Compute EIP-712 digest using stored config (set at initialize from program ID)
     let token_bytes: [u8; 32] = ctx.accounts.mint.key().to_bytes();
     let struct_hash = compute_struct_hash(
         &user,
@@ -296,7 +322,7 @@ pub fn handle_withdraw(
         CANONICAL_CHAIN_ID,
         nonce,
     );
-    let digest = compute_digest(&DOMAIN_SEPARATOR, &struct_hash);
+    let digest = compute_digest(&config.domain_separator, &struct_hash);
 
     // 8–9. Verify signatures, accumulate power, check quorum
     let validator_set = &ctx.accounts.validator_set;
@@ -380,29 +406,6 @@ pub fn handle_withdraw(
 mod tests {
     use super::*;
 
-    // -- Test-only helpers for cross-checking constants against runtime keccak --
-
-    fn compute_domain_separator(chain_id: u64, verifying_contract: &[u8; 20]) -> [u8; 32] {
-        let mut chain_id_word = [0u8; 32];
-        chain_id_word[24..].copy_from_slice(&chain_id.to_be_bytes());
-        let mut vc_word = [0u8; 32];
-        vc_word[12..].copy_from_slice(verifying_contract);
-        keccak256v(&[
-            &EIP712_DOMAIN_TYPEHASH,
-            &NAME_HASH,
-            &VERSION_HASH,
-            &chain_id_word,
-            &vc_word,
-        ])
-    }
-
-    fn derive_verifying_contract(program_id: &Pubkey) -> [u8; 20] {
-        let hash = keccak256(program_id.as_ref());
-        let mut out = [0u8; 20];
-        out.copy_from_slice(&hash[12..32]);
-        out
-    }
-
     // -- Precomputed literal assertions (verify hex literals match runtime keccak) --
 
     #[test]
@@ -432,16 +435,18 @@ mod tests {
     }
 
     #[test]
-    fn test_verifying_contract() {
-        let program_id = crate::ID;
-        let derived = derive_verifying_contract(&program_id);
-        assert_eq!(derived, VERIFYING_CONTRACT);
+    fn test_verifying_contract_from_declared_program_id() {
+        let vc = verifying_contract_from_program_id(&crate::ID);
+        let hash = keccak256(crate::ID.as_ref());
+        assert_eq!(&vc, &hash[12..32]);
     }
 
     #[test]
-    fn test_domain_separator_constant() {
-        let computed = compute_domain_separator(CANONICAL_CHAIN_ID, &VERIFYING_CONTRACT);
-        assert_eq!(computed, DOMAIN_SEPARATOR);
+    fn test_domain_separator_for_declared_program_id() {
+        let ds = domain_separator_for_program(&crate::ID, CANONICAL_CHAIN_ID);
+        let vc = verifying_contract_from_program_id(&crate::ID);
+        let computed = compute_domain_separator(CANONICAL_CHAIN_ID, &vc);
+        assert_eq!(ds, computed);
     }
 
     // -- Go conformance vectors (chain_id=1337, fake verifyingContract) --
@@ -476,7 +481,7 @@ mod tests {
             hex_decode_20("3000000000000000000000000000000000000003");
         let chain_id: u64 = 1337;
 
-        let ds = compute_domain_separator(chain_id, &verifying_contract);
+        let ds = super::compute_domain_separator(chain_id, &verifying_contract);
 
         assert_eq!(
             hex::encode(ds),
@@ -499,7 +504,7 @@ mod tests {
         let verifying_contract: [u8; 20] =
             hex_decode_20("3000000000000000000000000000000000000003");
 
-        let ds = compute_domain_separator(chain_id, &verifying_contract);
+        let ds = super::compute_domain_separator(chain_id, &verifying_contract);
         let sh = compute_struct_hash(&user, &destination, &token, amount, chain_id, nonce);
         let digest = compute_digest(&ds, &sh);
 
