@@ -29,6 +29,11 @@ type Config struct {
 	BridgeMints       []solana.PublicKey
 	BridgeMintsStr    []string `mapstructure:"bridge_mints"    toml:"bridge_mints"`
 	Commitment        string   `mapstructure:"commitment"      toml:"commitment"`
+	FeePayerKey       solana.PrivateKey
+	FeePayerKeyStr    string `mapstructure:"fee_payer_key"   toml:"fee_payer_key"`
+	EnableWithdraw    bool   `mapstructure:"enable_withdraw" toml:"enable_withdraw"`
+	NoSend            bool   `mapstructure:"no_send"         toml:"no_send"`
+	ComputeUnitPrice  uint64 `mapstructure:"compute_unit_price" toml:"compute_unit_price"`
 }
 
 func (c *Config) DecodePubkeys() error {
@@ -38,6 +43,13 @@ func (c *Config) DecodePubkeys() error {
 			return errors.Wrap(err, "program_id")
 		}
 		c.ProgramID = pub
+	}
+	if c.FeePayerKeyStr != "" {
+		key, err := solana.PrivateKeyFromBase58(c.FeePayerKeyStr)
+		if err != nil {
+			return errors.Wrap(err, "fee_payer_key")
+		}
+		c.FeePayerKey = key
 	}
 	c.BridgeMints = make([]solana.PublicKey, 0, len(c.BridgeMintsStr))
 	for i, mint := range c.BridgeMintsStr {
@@ -88,6 +100,11 @@ func (c *Config) Validate() error {
 	}
 	if len(c.BridgeMintsStr) == 0 {
 		return errors.New("bridge_mints is required")
+	}
+	if c.EnableWithdraw {
+		if c.FeePayerKeyStr == "" {
+			return errors.New("fee_payer_key is required when enable_withdraw is true")
+		}
 	}
 	return c.DecodePubkeys()
 }

@@ -118,7 +118,9 @@ pub enum BridgeError {
     ValidatorSetNotInitialized,
     #[msg("chain_id must equal the canonical chain ID for this program")]
     ChainIdMismatch,
-    #[msg("Stored domain separator does not match program constant")]
+    #[msg("Stored verifying contract does not match program ID")]
+    VerifyingContractMismatch,
+    #[msg("Stored domain separator does not match program ID")]
     DomainSeparatorMismatch,
     #[msg("Total validator power overflows u64")]
     TotalPowerOverflow,

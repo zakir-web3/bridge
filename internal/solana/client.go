@@ -70,15 +70,19 @@ func (c *Client) GetSlot(ctx context.Context) (uint64, error) {
 	return slot, nil
 }
 
+func (c *Client) maxSupportedTransactionVersion() *uint64 {
+	version := uint64(1)
+	return &version
+}
+
 func (c *Client) GetTransaction(ctx context.Context, sig solana.Signature) (*rpc.GetTransactionResult, error) {
 	ctx, cancel := c.withTimeout(ctx)
 	defer cancel()
 
-	version := uint64(0)
 	tx, err := c.rpc.GetTransaction(ctx, sig, &rpc.GetTransactionOpts{
 		Encoding:                       solana.EncodingBase64,
 		Commitment:                     c.commitment,
-		MaxSupportedTransactionVersion: &version,
+		MaxSupportedTransactionVersion: c.maxSupportedTransactionVersion(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "get transaction")
@@ -137,6 +141,31 @@ func (c *Client) GetSignaturesForAddress(
 		return nil, errors.Wrap(err, "get signatures for address")
 	}
 	return txSigs, nil
+}
+
+func (c *Client) GetLatestBlockhash(ctx context.Context) (solana.Hash, error) {
+	ctx, cancel := c.withTimeout(ctx)
+	defer cancel()
+
+	resp, err := c.rpc.GetLatestBlockhash(ctx, c.commitment)
+	if err != nil {
+		return solana.Hash{}, errors.Wrap(err, "get latest blockhash")
+	}
+	return resp.Value.Blockhash, nil
+}
+
+func (c *Client) SendTransaction(ctx context.Context, tx *solana.Transaction) (solana.Signature, error) {
+	ctx, cancel := c.withTimeout(ctx)
+	defer cancel()
+
+	sig, err := c.rpc.SendTransactionWithOpts(ctx, tx, rpc.TransactionOpts{
+		SkipPreflight:       false,
+		PreflightCommitment: c.commitment,
+	})
+	if err != nil {
+		return solana.Signature{}, errors.Wrap(err, "send transaction")
+	}
+	return sig, nil
 }
 
 func calculateBackoff(attempt int, config *evm.RetryConfig) time.Duration {
