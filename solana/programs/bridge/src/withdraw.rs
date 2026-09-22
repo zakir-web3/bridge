@@ -449,6 +449,78 @@ mod tests {
         assert_eq!(ds, computed);
     }
 
+    // -- Go conformance vectors (chain_id=900001, program IDs) --
+    // Keep in sync with internal/contract/solana_bridge_test.go.
+
+    /// Conformance: Go `TestSolanaBridgeDomainSeparator`.
+    #[test]
+    fn test_domain_separator_go_vector_c4yxx_program_id() {
+        use std::str::FromStr;
+        let program_id =
+            Pubkey::from_str("C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq").unwrap();
+        let ds = domain_separator_for_program(&program_id, CANONICAL_CHAIN_ID);
+        assert_eq!(
+            hex::encode(ds),
+            "e038ca293e650b49e9781d6f45d165e6ac0f202e3e6d4e00c07072d8088c3633"
+        );
+    }
+
+    /// Conformance: Go `TestSolanaBridgeDomainSeparator_AltProgramIDMatchesRustVector`.
+    #[test]
+    fn test_domain_separator_go_vector_alt_program_id() {
+        use std::str::FromStr;
+        let program_id =
+            Pubkey::from_str("5SPkxd2xhiG3aZbnW9ro7gdfhg3AZ44iR1k5rt9DJJ2").unwrap();
+        let vc = verifying_contract_from_program_id(&program_id);
+        assert_eq!(
+            hex::encode(vc),
+            "e723c846f25a42d2782d5bb51a5485a6bf46d395"
+        );
+        let ds = domain_separator_for_program(&program_id, CANONICAL_CHAIN_ID);
+        assert_eq!(
+            hex::encode(ds),
+            "3347d4f0929752e8b301efa4e933d2f41e8d0c4849ad2e39f3f75482422536ef"
+        );
+    }
+
+    /// Conformance: Go `TestBridgeHubWithdrawSolanaTypedData_DigestMatchesRustVector`.
+    #[test]
+    fn test_full_digest_solana_withdraw_go_vector_alt_program_id() {
+        use std::str::FromStr;
+        let program_id =
+            Pubkey::from_str("5SPkxd2xhiG3aZbnW9ro7gdfhg3AZ44iR1k5rt9DJJ2").unwrap();
+        let ds = domain_separator_for_program(&program_id, CANONICAL_CHAIN_ID);
+
+        let user: [u8; 20] = hex_decode_20("1000000000000000000000000000000000000001");
+        let destination = address_to_bytes32(&hex_decode_20(
+            "1000000000000000000000000000000000000001",
+        ));
+        let token = address_to_bytes32(&hex_decode_20(
+            "2000000000000000000000000000000000000002",
+        ));
+        let amount: u64 = 1_000_000_000_000_000_000;
+        let nonce: u64 = 12345;
+
+        let sh = compute_struct_hash(
+            &user,
+            &destination,
+            &token,
+            amount,
+            CANONICAL_CHAIN_ID,
+            nonce,
+        );
+        assert_eq!(
+            hex::encode(sh),
+            "0750425c9837f1a20d7ad334d5677fc7b06aa5c9029113dc03ee79df64f092fe"
+        );
+
+        let digest = compute_digest(&ds, &sh);
+        assert_eq!(
+            hex::encode(digest),
+            "98bc4e91da645a2c1d0aa949fe25f35836513332ae72a5d4d21127edb8408f6d"
+        );
+    }
+
     // -- Go conformance vectors (chain_id=1337, fake verifyingContract) --
 
     /// Conformance: Go test `TestBridgeHubWithdraw_ToTypedData` in
