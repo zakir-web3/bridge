@@ -10,6 +10,8 @@ func anchorDiscriminator(namespace, name string) []byte {
 }
 
 var (
-	depositInstructionDiscriminator = anchorDiscriminator("global", "deposit")
-	depositEventDiscriminator       = anchorDiscriminator("event", "DepositEvent")
+	depositInstructionDiscriminator     = anchorDiscriminator("global", "deposit")
+	withdrawInstructionDiscriminator    = anchorDiscriminator("global", "withdraw")
+	depositEventDiscriminator           = anchorDiscriminator("event", "DepositEvent")
+	withdrawFinalizedEventDiscriminator = anchorDiscriminator("event", "WithdrawFinalized")
 )

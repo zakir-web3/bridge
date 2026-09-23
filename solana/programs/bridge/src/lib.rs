@@ -26,8 +26,10 @@ pub mod bridge {
         config.bump = ctx.bumps.config;
         config.chain_id = chain_id;
         config.withdraw_paused = false;
-        config.verifying_contract = withdraw::VERIFYING_CONTRACT;
-        config.domain_separator = withdraw::DOMAIN_SEPARATOR;
+        config.verifying_contract =
+            withdraw::verifying_contract_from_program_id(&crate::ID);
+        config.domain_separator =
+            withdraw::domain_separator_for_program(&crate::ID, chain_id);
 
         Ok(())
     }

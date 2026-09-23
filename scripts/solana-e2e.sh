@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Solana → EVM deposit end-to-end test (local only).
+# Solana ↔ EVM hub end-to-end test (local only).
 #
 # Flow:
 #   1. Start solana-test-validator and a Hardhat hub node
 #   2. Deploy Solana bridge program + SPL mint, BridgeHub + bridged ERC-20 on hub
-#   3. Start relayer (Solana scanner + hub minter)
+#   3. Start relayer (Solana scanner + hub)
 #   4. Deposit SPL on Solana → relayer mints bridged ERC-20 on hub
+#   5. Withdraw on hub (burn) → relayer releases SPL on Solana → hub confirm
 #
 # Usage: ./scripts/solana-e2e.sh
 # Requires: anchor, solana CLI, solana-test-validator, node, npm, make, curl.
@@ -39,6 +40,8 @@ USER_PRIVATE_KEY="${USER_PRIVATE_KEY:-0x5de4111afa1a4b94908f83103eb1f1706367c2e6
 DISPUTE_PERIOD_SECONDS="${DISPUTE_PERIOD_SECONDS:-2}"
 BLOCK_DURATION_MILLIS="${BLOCK_DURATION_MILLIS:-750}"
 DEPOSIT_AMOUNT="${DEPOSIT_AMOUNT:-1000000}" # 1 SPL token with 6 decimals
+# Hub-side burn amount (18 decimals); default half of the minted hub balance.
+WITHDRAW_HUB_AMOUNT="${WITHDRAW_HUB_AMOUNT:-500000000000000000}"
 
 export HARDHAT_DISABLE_TELEMETRY_PROMPT="${HARDHAT_DISABLE_TELEMETRY_PROMPT:-true}"
 
@@ -164,6 +167,77 @@ token_balance() {
     ')
 }
 
+keypair_base58() {
+  local wallet_json="$1"
+  (cd "$SOLANA" && NODE_PATH="$SOLANA/node_modules" WALLET="$wallet_json" node -e '
+    const fs = require("fs");
+    const bs58 = require("bs58");
+    const { Keypair } = require("@solana/web3.js");
+    const secret = Uint8Array.from(JSON.parse(fs.readFileSync(process.env.WALLET, "utf8")));
+    console.log(bs58.encode(Keypair.fromSecretKey(secret).secretKey));
+  ')
+}
+
+pubkey_to_bytes32() {
+  local pubkey="$1"
+  (cd "$SOLANA" && NODE_PATH="$SOLANA/node_modules" PUBKEY="$pubkey" node -e '
+    const { PublicKey } = require("@solana/web3.js");
+    const hex = Buffer.from(new PublicKey(process.env.PUBKEY).toBytes()).toString("hex");
+    console.log("0x" + hex);
+  ')
+}
+
+spl_token_balance() {
+  local owner="$1"
+  local mint="$2"
+  (cd "$SOLANA" && NODE_PATH="$SOLANA/node_modules" \
+    RPC="$SOLANA_RPC" OWNER="$owner" MINT="$mint" node -e '
+      const { Connection, PublicKey } = require("@solana/web3.js");
+      const { getAssociatedTokenAddress, getAccount } = require("@solana/spl-token");
+      (async () => {
+        const connection = new Connection(process.env.RPC, "confirmed");
+        const owner = new PublicKey(process.env.OWNER);
+        const mint = new PublicKey(process.env.MINT);
+        const ata = await getAssociatedTokenAddress(mint, owner);
+        try {
+          const account = await getAccount(connection, ata);
+          console.log(account.amount.toString());
+        } catch (err) {
+          if (err.name === "TokenAccountNotFoundError") {
+            console.log("0");
+            return;
+          }
+          throw err;
+        }
+      })().catch((err) => {
+        console.error(err);
+        process.exit(1);
+      });
+    ')
+}
+
+hub_pending_messages() {
+  local rpc="$1"
+  local hub="$2"
+  (cd "$SOLIDITY" && NODE_PATH="$SOLIDITY/node_modules" \
+    RPC="$rpc" HUB="$hub" node -e '
+      const { ethers } = require("ethers");
+      (async () => {
+        const provider = new ethers.JsonRpcProvider(process.env.RPC);
+        const hub = new ethers.Contract(
+          process.env.HUB,
+          ["function getPendingMessages() view returns (bytes32[])"],
+          provider
+        );
+        const pending = await hub.getPendingMessages();
+        console.log(pending.length.toString());
+      })().catch((err) => {
+        console.error(err);
+        process.exit(1);
+      });
+    ')
+}
+
 wait_for_balance() {
   local label="$1"
   local rpc="$2"
@@ -177,6 +251,52 @@ wait_for_balance() {
     bal="$(token_balance "$rpc" "$token" "$account")"
     echo "[solana-e2e] ${label}: balance=${bal} expected=${expected}"
     if [[ "$bal" == "$expected" ]]; then
+      return 0
+    fi
+    now="$(date +%s)"
+    if (( now - start >= timeout_secs )); then
+      echo "timeout waiting for ${label}" >&2
+      return 1
+    fi
+    sleep 1
+  done
+}
+
+wait_for_spl_balance() {
+  local label="$1"
+  local owner="$2"
+  local mint="$3"
+  local expected="$4"
+  local timeout_secs="$5"
+  local start now bal
+  start="$(date +%s)"
+  while true; do
+    bal="$(spl_token_balance "$owner" "$mint")"
+    echo "[solana-e2e] ${label}: spl_balance=${bal} expected=${expected}"
+    if [[ "$bal" == "$expected" ]]; then
+      return 0
+    fi
+    now="$(date +%s)"
+    if (( now - start >= timeout_secs )); then
+      echo "timeout waiting for ${label}" >&2
+      return 1
+    fi
+    sleep 1
+  done
+}
+
+wait_for_pending_messages() {
+  local label="$1"
+  local rpc="$2"
+  local hub="$3"
+  local expected="$4"
+  local timeout_secs="$5"
+  local start now count
+  start="$(date +%s)"
+  while true; do
+    count="$(hub_pending_messages "$rpc" "$hub")"
+    echo "[solana-e2e] ${label}: pending_messages=${count} expected=${expected}"
+    if [[ "$count" == "$expected" ]]; then
       return 0
     fi
     now="$(date +%s)"
@@ -293,6 +413,23 @@ SRC_TOKEN_BYTES32="$(extract_kv "$WORK/solana-setup.log" "SRC_TOKEN_BYTES32")"
 TOKEN_DECIMAL="$(extract_kv "$WORK/solana-setup.log" "TOKEN_DECIMAL")"
 echo "==> mint ${MINT}"
 
+# Recipient for hub → Solana withdraw (SPL unlock destination).
+WITHDRAW_RECIPIENT_WALLET="$WORK/withdraw-recipient.json"
+solana-keygen new -o "$WITHDRAW_RECIPIENT_WALLET" --no-bip39-passphrase --force >/dev/null
+WITHDRAW_RECIPIENT="$(solana address -k "$WITHDRAW_RECIPIENT_WALLET")"
+WITHDRAW_DESTINATION_BYTES32="$(pubkey_to_bytes32 "$WITHDRAW_RECIPIENT")"
+FEE_PAYER_KEY="$(keypair_base58 "$SOLANA_WALLET")"
+echo "==> withdraw recipient ${WITHDRAW_RECIPIENT}"
+
+echo "==> configure Solana validator set for withdraw quorum"
+(
+  cd "$SOLANA"
+  export ANCHOR_PROVIDER_URL="$SOLANA_RPC"
+  export ANCHOR_WALLET="$SOLANA_WALLET"
+  export VALIDATOR="$VALIDATOR"
+  npx ts-node scripts/setup-validator-set.ts
+) | tee "$WORK/validator-set.log"
+
 # --- EVM hub chain ---
 echo "==> start hub Hardhat (chain $HUB_CHAIN_ID port $HUB_PORT)"
 (
@@ -356,6 +493,26 @@ EXPECTED_HUB_BALANCE="$(
       console.log((amount * scale).toString());
     '
 )"
+
+# SPL amount released on Solana (6 decimals) after hub burn at 18 decimals.
+EXPECTED_SPL_WITHDRAW="$(
+  cd "$SOLIDITY" && NODE_PATH="$SOLIDITY/node_modules" \
+    AMOUNT="$WITHDRAW_HUB_AMOUNT" TOKEN_DECIMAL="$TOKEN_DECIMAL" node -e '
+      const amount = BigInt(process.env.AMOUNT);
+      const srcDec = BigInt(process.env.TOKEN_DECIMAL);
+      const destDec = 18n;
+      const diff = srcDec - destDec;
+      const scale = 10n ** (-diff);
+      console.log((amount / scale).toString());
+    '
+)"
+EXPECTED_HUB_BALANCE_AFTER_WITHDRAW="$(
+  cd "$SOLIDITY" && NODE_PATH="$SOLIDITY/node_modules" \
+    FULL="$EXPECTED_HUB_BALANCE" WITHDRAW="$WITHDRAW_HUB_AMOUNT" node -e '
+      console.log((BigInt(process.env.FULL) - BigInt(process.env.WITHDRAW)).toString());
+    '
+)"
+echo "==> expected SPL withdraw amount ${EXPECTED_SPL_WITHDRAW}"
 
 # [bridge] is a no-op placeholder here; Solana deposits are handled via [solana].
 echo "==> write relayer config"
@@ -433,6 +590,10 @@ start_slot = 0
 slot_interval = 1000
 slot_delay = 0
 clear_cache = false
+fee_payer_key = "${FEE_PAYER_KEY}"
+enable_withdraw = true
+no_send = false
+compute_unit_price = 1000
 EOF
 
 echo "==> start relayer"
@@ -475,9 +636,50 @@ sleep 2
 
 wait_for_balance "hub mint after Solana deposit" "$HUB_RPC" "$DEST_TOKEN" "$USER_ADDRESS" "$EXPECTED_HUB_BALANCE" 120
 
-echo "==> solana e2e passed"
+# --- Hub withdraw (burn) → Solana SPL release → Hub confirm ---
+echo "==> withdraw on hub (burn bridged token, destination Solana pubkey)"
+(
+  cd "$SOLIDITY"
+  PRIVATE_KEY="$USER_PRIVATE_KEY" \
+    ETH_RPC_URL="$HUB_RPC" \
+    CHAIN_ID="$HUB_CHAIN_ID" \
+    TOKEN_CHAIN_ID="$SOLANA_CHAIN_ID" \
+    BRIDGE_HUB_CONTRACT_ADDRESS="$BRIDGE_HUB_ADDRESS" \
+    TOKEN_ADDRESS="$DEST_TOKEN" \
+    DESTINATION_BYTES32="$WITHDRAW_DESTINATION_BYTES32" \
+    AMOUNT="$WITHDRAW_HUB_AMOUNT" \
+    npx hardhat run scripts/withdraw-solana.ts --network custom
+) | tee "$WORK/withdraw.log"
+
+sleep 2
+
+wait_for_spl_balance \
+  "SPL release after hub withdraw" \
+  "$WITHDRAW_RECIPIENT" \
+  "$MINT" \
+  "$EXPECTED_SPL_WITHDRAW" \
+  180
+
+wait_for_balance \
+  "hub burn after withdraw" \
+  "$HUB_RPC" \
+  "$DEST_TOKEN" \
+  "$USER_ADDRESS" \
+  "$EXPECTED_HUB_BALANCE_AFTER_WITHDRAW" \
+  120
+
+wait_for_pending_messages \
+  "hub confirm after Solana release" \
+  "$HUB_RPC" \
+  "$BRIDGE_HUB_ADDRESS" \
+  "0" \
+  180
+
+echo "==> solana e2e passed (deposit + withdraw round-trip)"
 echo "ProgramID=${PROGRAM_ID}"
 echo "Mint=${MINT}"
 echo "BridgeHub=${BRIDGE_HUB_ADDRESS}"
 echo "DestToken=${DEST_TOKEN}"
 echo "User=${USER_ADDRESS}"
+echo "WithdrawRecipient=${WITHDRAW_RECIPIENT}"
+echo "SplWithdrawAmount=${EXPECTED_SPL_WITHDRAW}"
