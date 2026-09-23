@@ -14,7 +14,7 @@ import (
 const (
 	solanaProgramIDC4Yxx = "C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq"
 	// CI deploy ID after anchor keys sync; cross-checked in withdraw.rs Go conformance tests.
-	solanaProgramIDAlt = "5SPkxd2xhiG3aZbnW9ro7gdfhg3AZ44iR1k5rt9DJJ2"
+	solanaProgramIDAlt     = "5SPkxd2xhiG3aZbnW9ro7gdfhg3AZ44iR1k5rt9DJJ2"
 	solanaCanonicalChainID = 900001
 )
 
