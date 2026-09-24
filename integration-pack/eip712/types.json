@@ -1,0 +1,20 @@
+{
+  "EIP712Domain": [
+    { "name": "name", "type": "string" },
+    { "name": "version", "type": "string" },
+    { "name": "chainId", "type": "uint256" },
+    { "name": "verifyingContract", "type": "address" }
+  ],
+  "Withdraw": [
+    { "name": "user", "type": "address" },
+    { "name": "destination", "type": "bytes32" },
+    { "name": "token", "type": "bytes32" },
+    { "name": "amount", "type": "uint256" },
+    { "name": "chainId", "type": "uint256" },
+    { "name": "nonce", "type": "uint64" }
+  ],
+  "notes": [
+    "Solana-bound Hub withdraw uses Bridge domain + program-derived verifyingContract.",
+    "Hub confirm of a finalized Solana withdraw uses BridgeHub domain (see Go ToTypedData on SolanaWithdrawFinalized)."
+  ]
+}

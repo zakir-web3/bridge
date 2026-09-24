@@ -82,3 +82,13 @@ When editing scanner, scheduler, cache, or RPC code:
 - [solidity/README.md](solidity/README.md) — contract deployment
 - [solana/README.md](solana/README.md) — Solana deposit flow
 - [config.example.toml](config.example.toml) — relayer configuration reference
+
+## External / AI integration pack
+
+Integrators (and integrator AIs) should use [`integration-pack/`](integration-pack/) instead of scanning the whole repo.
+
+Refresh generated artifacts after ABI / IDL / EIP-712 changes:
+
+```bash
+./scripts/export-integration-pack.sh
+```
