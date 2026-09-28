@@ -1,0 +1,19 @@
+{
+  "packVersion": "0.1.0-preview",
+  "networks": {
+    "evm_hub_sepolia": {
+      "chainId": 11155111,
+      "BridgeHub": "0xYOUR_HUB_PROXY",
+      "BridgeERC20_example": "0xYOUR_BRIDGED_TOKEN"
+    },
+    "evm_source_example": {
+      "chainId": 1,
+      "Bridge": "0xYOUR_BRIDGE"
+    },
+    "solana_devnet": {
+      "chainId": 900001,
+      "programId": "YOUR_DEPLOYED_PROGRAM_ID",
+      "note": "verifyingContract = keccak256(programId)[12:32]; never copy C4Yxx separator if keys were synced"
+    }
+  }
+}

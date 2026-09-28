@@ -1,0 +1,15 @@
+{
+  "Bridge": {
+    "name": "Bridge",
+    "version": "1",
+    "chainId": "<src or solana canonical 900001>",
+    "verifyingContract": "<EVM Bridge address OR keccak256(solana_program_id)[12:32]>"
+  },
+  "BridgeHub": {
+    "name": "BridgeHub",
+    "version": "1",
+    "chainId": "<hub chain id>",
+    "verifyingContract": "<BridgeHub proxy address>"
+  },
+  "solanaVerifyingContractRule": "common.BytesToAddress(keccak256(program_id_32bytes)[12:32])"
+}

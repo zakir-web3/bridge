@@ -1,0 +1,24 @@
+{
+  "description": "Golden vectors from zakir-web3/bridge internal/contract/solana_bridge_test.go (main @ ab82cd1)",
+  "canonicalChainId": 900001,
+  "programs": {
+    "C4YxxrnCKnE4hVdTPcmTZN6yuHp5U9xVXRs3VanEeYfq": {
+      "verifyingContract": "0xdb94ec3d773ea0a5b9b89b4bf28ed21dec3f0f8f",
+      "domainSeparator": "0xe038ca293e650b49e9781d6f45d165e6ac0f202e3e6d4e00c07072d8088c3633"
+    },
+    "5SPkxd2xhiG3aZbnW9ro7gdfhg3AZ44iR1k5rt9DJJ2": {
+      "verifyingContract": "0xE723c846F25a42d2782D5bb51a5485A6bf46D395",
+      "domainSeparator": "0x3347d4f0929752e8b301efa4e933d2f41e8d0c4849ad2e39f3f75482422536ef",
+      "fullDigestExample": {
+        "user": "0x1000000000000000000000000000000000000001",
+        "destination": "bytes32(user)",
+        "token": "bytes32(0x2000000000000000000000000000000000000002)",
+        "amount": "1000000000000000000",
+        "nonce": 12345,
+        "structHash": "0x0750425c9837f1a20d7ad334d5677fc7b06aa5c9029113dc03ee79df64f092fe",
+        "digest": "0x98bc4e91da645a2c1d0aa949fe25f35836513332ae72a5d4d21127edb8408f6d"
+      }
+    }
+  },
+  "acceptance": "Before shipping client signing code, recompute domainSeparator and digest; must match this file byte-for-byte."
+}
